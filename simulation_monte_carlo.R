@@ -7,54 +7,8 @@ library(tidyr)
 rm(list=ls())
 set.seed(1)
 
+source(file = "parametre.R")
 source(file = "fonction.R")
-
-# Taille de la population
-N <- 20000
-
-# Générer les variables auxiliaires selon les distributions spécifiées
-z1 <- rbinom(N, size = 1, prob = 0.5)                # z1i ∼ Bernoulli(0.5)
-z2 <- runif(N, min = 0, max = 2)                     # z2i ∼ Uniform(0, 2)
-z3 <- rexp(N, rate = 1)                              # z3i ∼ Exponential(1)
-z4 <- rchisq(N, df = 4)                              # z4i ∼ χ^2(4)
-
-# Calculer les variables x selon les relations données
-x1 <- z1                                             # x1i = z1i
-x2 <- z2 + 0.3 * x1                                  # x2i = z2i + 0.3 * x1i
-x3 <- z3 + 0.2 * (x1 + x2)                           # x3i = z3i + 0.2 * (x1i + x2i)
-x4 <- z4 + 0.1 * (x1 + x2 + x3)                      # x4i = z4i + 0.1 * (x1i + x2i + x3i)
-
-# Calcul de Var(eta)
-x_beta <- 2 + x1 + x2 + x3 + x4
-
-# Définir la corrélation cible
-rho_target <- 0.5
-
-# Calcul de sigma
-sigma <- sqrt(var(x_beta) * (1 / rho_target^2 - 1))
-sigma
-
-# Générer les erreurs aléatoires normales εi ∼ Normal(0, 1)
-epsilon <- rnorm(N, mean = 0, sd = 1)
-
-# Calculer la variable réponse y selon le modèle
-y <- x_beta + sigma * epsilon         # yi = 2 + x1i + x2i + x3i + x4i + σεi
-cor(y, x_beta)
-
-# Mettre les données dans un data.frame pour plus de clarté
-pop <- data.frame(
-  y = y,
-  x1 = x1,
-  x2 = x2,
-  x3 = x3,
-  x4 = x4
-)
-
-vrai_total <- round(sum(pop$y),1)
-vrai_total
-
-vrai_moyenne <- round(mean(pop$y),3)
-vrai_moyenne
 
 df <- data.frame(
   total_y_c = numeric(0), total_y_inc = numeric(0), total_y_naif = numeric(0),
@@ -66,14 +20,6 @@ df <- data.frame(
 )
 
 n_simu <- 10000
-n_prob <- 500
-n_non_prob <- 500
-theta1 <- 0.1
-theta2 <- 0.2
-theta3 <- 0.1
-theta4 <- 0.2
-a <- 10
-nb_GHR <- 3
 
 for (i in 1:n_simu){
   vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob,

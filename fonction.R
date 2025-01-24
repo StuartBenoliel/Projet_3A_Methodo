@@ -1,15 +1,16 @@
+# Fonction pour calculer la somme des πA pour un θ0 donné
+sum_pik <- function(theta0) {
+  eta <- theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4*x4
+  piA <- 1 / (1 + exp(-eta))
+  sum(piA)
+}
+
+
 fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
                                 a, nb_GHR){
   
   
   # Pour l'échantillon non probabiliste
-  # Fonction pour calculer la somme des πA pour un θ0 donné
-  sum_pik <- function(theta0) {
-    eta <- theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4*x4
-    piA <- 1 / (1 + exp(-eta))
-    sum(piA)
-  }
-  
   # Résolution pour trouver θ0
   theta0 <- uniroot(function(theta) sum_pik(theta) - n_non_prob, interval = c(-50, 50))$root
   
