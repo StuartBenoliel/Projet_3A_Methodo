@@ -10,66 +10,38 @@ source(file = "parametre.R")
 source(file = "fonction.R")
 
 # Pour l'échantillon non probabiliste
-# Résolution pour trouver θ0
-theta0 <- uniroot(function(theta) sum_pik(theta) - n_non_prob, interval = c(-50, 50))$root
 
 # Tirage de Poisson avec pik selon un modèle logistique
-pop$Prob <- 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4 * x4)))
-summary(pop$Prob)
-sum(pop$Prob)
-
-ech_non_prob <- sampling::UPpoisson(pop$Prob)
-ech_non_prob <- getdata(pop, ech_non_prob)  %>% 
-  mutate(indic_participation = 1)
+# pi = 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4 * x4)))
+ech_non_prob <- tirage_non_proba()
 summary(ech_non_prob$Prob)
+max(ech_non_prob$Prob) / min(ech_non_prob$Prob)
 
 
 # Pour l'échantillon probabiliste
 
-#####
-# STSRS par rapport à x1
-Nh <- pop %>% group_by(x1) %>% summarise(Nh = n())
-Nh$alloc <- round(Nh$Nh*n_prob/N)
-sum(Nh$alloc)
-
-# Tirage de l'échantillon
-pop <- pop[order(pop$x1),]
-ech_prob <- sampling::strata(data = pop, stratanames = 'x1',
-                             size = Nh$alloc, method = 'srswor')
-ech_prob <- getdata(pop, ech_prob) %>% 
-  select(-Stratum) %>% 
-  mutate(indic_participation = 0)
+# STSRS par rapport à x1 = poids identique
+type_tirage <- 'Stratifié'
+# Tirage de Poisson avec pik proportionnelle à zi = 0.45 + x3 + 0.03*y
+type_tirage <- 'Poisson'
+ech_prob <- tirage_proba(type = type_tirage)
 summary(ech_prob$Prob)
-
-#####
-
-zi <- 0.45 + pop$x3 + 0.03*pop$y
-max(zi) / min(zi)
-
-pop$Prob <- n_prob*zi / sum(zi)
-summary(pop$Prob)
-
-ech_prob <- sampling::UPpoisson(pop$Prob)
-ech_prob <- getdata(pop, ech_prob)  %>% 
-  mutate(indic_participation = 0)
-summary(ech_prob$Prob)
-
-####
+max(ech_prob$Prob) / min(ech_prob$Prob)
 
 data <- rbind(ech_prob, ech_non_prob)
 
-modele_logistique_complet <- glm(indic_participation ~ x1 + x2 + x3, 
+modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3 + x4, 
                                  data = data, 
                                  family = binomial)
-summary(modele_logistique_complet)
+summary(modele_participation_complet)
 
-modele_logistique_incomplet <- glm(indic_participation ~ x1 + x2, 
+modele_participation_incomplet <- glm(indic_participation ~ x1 + x2 + x3, 
                                    data = data, 
                                    family = binomial)
-summary(modele_logistique_incomplet)
+summary(modele_participation_incomplet)
 
-data$prob_participation_complet <- predict(modele_logistique_complet, type = "response")
-data$prob_participation_incomplet <- predict(modele_logistique_incomplet, type = "response")
+data$prob_participation_complet <- predict(modele_participation_complet, type = "response")
+data$prob_participation_incomplet <- predict(modele_participation_incomplet, type = "response")
 
 ech_prob <- data %>% 
   filter(indic_participation == 0) %>% 

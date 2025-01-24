@@ -41,11 +41,18 @@ vrai_moyenne
 
 # Paramètres de la simulation
 
+# Taille de l'échantillon probabiliste
 n_prob <- 500
+# Taille de l'échantillon non probabiliste
 n_non_prob <- 500
+
+# Paramètres pour la définition des vrai proba d'inclusion (inconnu) pour l'échantillon non proba
 theta1 <- 0.1
 theta2 <- 0.2
 theta3 <- 0.1
 theta4 <- 0.2
+
+# Paramètre du modèle de Frank
 a <- 10
+# Nombres de groupes homogènes de réponse
 nb_GHR <- 3
