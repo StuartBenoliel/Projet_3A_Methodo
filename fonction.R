@@ -1,6 +1,6 @@
 # Fonction pour calculer la somme des πA pour un θ0 donné
 sum_pik <- function(theta0) {
-  eta <- theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4*x4
+  eta <- theta0 + theta1*x1 + theta2*x2 + theta3*x3
   piA <- 1 / (1 + exp(-eta))
   sum(piA)
 }
@@ -11,7 +11,7 @@ tirage_non_proba <- function() {
                     interval = c(-50, 50))$root
   
   # Tirage de Poisson avec pik selon un modèle logistique
-  pop$Prob <- 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4 * x4)))
+  pop$Prob <- 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3)))
   
   ech_non_prob <- sampling::UPpoisson(pop$Prob)
   ech_non_prob <- getdata(pop, ech_non_prob)  %>% 
@@ -51,17 +51,17 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   ech_non_prob <- tirage_non_proba()
   
   # Pour l'échantillon probabiliste
-  # Tirage de Poisson avec pik proportionnelle à zi = 0.45 + x3 + 0.03*y
-  type_tirage <- 'Poisson'
+  # STSRS par rapport à x1
+  type_tirage <- 'Stratifié'
   ech_prob <- tirage_proba(type = type_tirage)
   
   data <- rbind(ech_prob, ech_non_prob)
   
-  modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3 + x4, 
+  modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
                                       data = data, 
                                       family = binomial)
   
-  modele_participation_incomplet <- glm(indic_participation ~ x1 + x2 + x3, 
+  modele_participation_incomplet <- glm(indic_participation ~ x1 + x2, 
                                         data = data, 
                                         family = binomial)
   

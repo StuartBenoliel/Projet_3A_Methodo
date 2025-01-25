@@ -20,22 +20,20 @@ max(ech_non_prob$Prob) / min(ech_non_prob$Prob)
 
 # Pour l'échantillon probabiliste
 
-# STSRS par rapport à x1 = poids identique
+# STSRS par rapport à x1
 type_tirage <- 'Stratifié'
-# Tirage de Poisson avec pik proportionnelle à zi = 0.45 + x3 + 0.03*y
-type_tirage <- 'Poisson'
 ech_prob <- tirage_proba(type = type_tirage)
 summary(ech_prob$Prob)
 max(ech_prob$Prob) / min(ech_prob$Prob)
 
 data <- rbind(ech_prob, ech_non_prob)
 
-modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3 + x4, 
+modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
                                  data = data, 
                                  family = binomial)
 summary(modele_participation_complet)
 
-modele_participation_incomplet <- glm(indic_participation ~ x1 + x2 + x3, 
+modele_participation_incomplet <- glm(indic_participation ~ x1 + x2, 
                                    data = data, 
                                    family = binomial)
 summary(modele_participation_incomplet)
