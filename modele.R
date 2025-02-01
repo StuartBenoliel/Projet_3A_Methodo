@@ -3,6 +3,10 @@ library(dplyr)
 library(ggplot2)
 library(gridExtra)
 
+# install.packages(pkgs = c("devtools"))
+# devtools::install_github("StatCan/nppR")
+library(nppR)
+
 rm(list=ls())
 set.seed(1)
 
@@ -85,7 +89,24 @@ g4 <- ggplot(ech_non_prob,
 
 grid.arrange(g1, g2, g3, g4, ncol = 2)
 
+# Méthode nppCART
+
+cart_c <- nppCART(np.data = ech_non_prob, 
+                p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
+                sampling.weight = 'poids_sondage', predictors = c("x1", "x2", "x3"))
+
+cart_inc <- nppCART(np.data = ech_non_prob, 
+                  p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
+                  sampling.weight = 'poids_sondage', predictors = c("x1", "x2"))
+
+### Extract the nppCART-estimated propensities
+ech_non_prob <- ech_non_prob %>% 
+  mutate(propensity_c = cart_c$get_npdata_with_propensity()$propensity,
+         propensity_inc = cart_inc$get_npdata_with_propensity()$propensity)
+
+
 # On suppose 3 GHR
+
 # Méthode de Frank : f(r_k) = log(1 + a*r_k / n_non_prob)
 log_a <- log(1 + a)
 
@@ -163,45 +184,77 @@ ech_non_prob <- ech_non_prob %>%
       GHR_inc == 3 ~ Ng_inc$Ng[3]/nrow(ech_non_prob[ech_non_prob$GHR_inc==3, ]),
     )
     ) %>%
-  mutate(produit_c = poids_frank_c * y,
-         produit_inc = poids_frank_inc * y)
+  mutate(produit_frank_c = poids_frank_c * y,
+         produit_frank_inc = poids_frank_inc * y,
+         produit_cart_c = y / propensity_c,
+         produit_cart_inc = y / propensity_inc)
 
-# Calcul du total de y par la méthode de pondération inverse de Frank
-total_y_prob <-round(sum(ech_prob$produit),1)
-total_y_c <- round(sum(ech_non_prob$produit_c),1)
-total_y_inc <- round(sum(ech_non_prob$produit_inc),1)
-total_y_naif <- round(sum(ech_non_prob$y)*N/n_non_prob,1)
-vrai_total
-total_y_prob
-total_y_c
-total_y_inc
-total_y_naif
+# Calcul des estimateurs
 
-biais_relatif_total_prob <- round(100*(total_y_prob - vrai_total)/vrai_total,3)
-biais_relatif_total_c <- round(100*(total_y_c - vrai_total)/vrai_total,3)
-biais_relatif_total_inc <- round(100*(total_y_inc - vrai_total)/vrai_total,3)
-biais_relatif_total_naif <- round(100*(total_y_naif - vrai_total)/vrai_total,3)
-biais_relatif_total_prob
-biais_relatif_total_c
-biais_relatif_total_inc
-biais_relatif_total_naif
+tot_prob <- round(sum(ech_prob$produit),1)
+tot_naif <- round(sum(ech_non_prob$y)*N/n_non_prob,1)
 
-moyenne_y_prob <- round(sum(ech_prob$produit) / sum(1/ech_prob$Prob),3)
-moyenne_y_c <- round(sum(ech_non_prob$produit_c) / sum(ech_non_prob$poids_frank_c),3)
-moyenne_y_inc <- round(sum(ech_non_prob$produit_inc) / sum(ech_non_prob$poids_frank_inc),3)
-moyenne_y_naif <- mean(ech_non_prob$y)
-vrai_moyenne
-moyenne_y_prob
-moyenne_y_c
-moyenne_y_inc
-moyenne_y_naif
+tot_frank_c <- round(sum(ech_non_prob$produit_frank_c),1)
+tot_frank_inc <- round(sum(ech_non_prob$produit_frank_inc),1)
+tot_cart_c <- round(sum(ech_non_prob$produit_cart_c),1)
+tot_cart_inc <- round(sum(ech_non_prob$produit_cart_inc),1)
 
-biais_relatif_moyenne_prob <- round(100*(moyenne_y_prob - vrai_moyenne)/vrai_moyenne,3)
-biais_relatif_moyenne_c <- round(100*(moyenne_y_c - vrai_moyenne)/vrai_moyenne,3)
-biais_relatif_moyenne_inc <- round(100*(moyenne_y_inc - vrai_moyenne)/vrai_moyenne,3)
-biais_relatif_moyenne_naif <- round(100*(moyenne_y_naif - vrai_moyenne)/vrai_moyenne,3)
-biais_relatif_moyenne_prob
-biais_relatif_moyenne_c
-biais_relatif_moyenne_inc
-biais_relatif_moyenne_naif
+vrai_tot
+tot_prob
+tot_naif
+
+tot_frank_c
+tot_frank_inc
+tot_cart_c 
+tot_cart_inc 
+
+biais_r_tot_prob <- round(100*(tot_prob - vrai_tot)/vrai_tot,3)
+biais_r_tot_naif <- round(100*(tot_naif - vrai_tot)/vrai_tot,3)
+
+biais_r_tot_frank_c <- round(100*(tot_frank_c - vrai_tot)/vrai_tot,3)
+biais_r_tot_frank_inc <- round(100*(tot_frank_inc - vrai_tot)/vrai_tot,3)
+biais_r_tot_cart_c <- round(100*(tot_cart_c - vrai_tot)/vrai_tot,3)
+biais_r_tot_cart_inc <- round(100*(tot_cart_inc - vrai_tot)/vrai_tot,3)
+
+biais_r_tot_prob
+biais_r_tot_naif
+
+biais_r_tot_frank_c
+biais_r_tot_frank_inc
+biais_r_tot_cart_c
+biais_r_tot_cart_inc
+
+moy_prob <- round(sum(ech_prob$produit) / sum(1/ech_prob$Prob),3)
+moy_naif <- mean(ech_non_prob$y)
+
+moy_frank_c <- round(sum(ech_non_prob$produit_frank_c) / sum(ech_non_prob$poids_frank_c),3)
+moy_frank_inc <- round(sum(ech_non_prob$produit_frank_inc) / sum(ech_non_prob$poids_frank_inc),3)
+moy_cart_c <- round(sum(ech_non_prob$produit_cart_c) / sum(1/ech_non_prob$propensity_c),3)
+moy_cart_inc <- round(sum(ech_non_prob$produit_cart_inc) /  sum(1/ech_non_prob$propensity_inc),3)
+
+vrai_moy
+moy_prob
+moy_naif
+
+moy_frank_c
+moy_frank_inc
+moy_cart_c
+moy_cart_inc
+
+biais_r_moy_prob <- round(100*(moy_prob - vrai_moy)/vrai_moy,3)
+biais_r_moy_naif <- round(100*(moy_naif - vrai_moy)/vrai_moy,3)
+
+biais_r_moy_frank_c <- round(100*(moy_frank_c - vrai_moy)/vrai_moy,3)
+biais_r_moy_frank_inc <- round(100*(moy_frank_inc - vrai_moy)/vrai_moy,3)
+biais_r_moy_cart_c <- round(100*(moy_cart_c - vrai_moy)/vrai_moy,3)
+biais_r_moy_cart_inc <- round(100*(moy_cart_inc - vrai_moy)/vrai_moy,3)
+
+biais_r_moy_prob
+biais_r_moy_naif
+
+biais_r_moy_frank_c
+biais_r_moy_frank_inc
+biais_r_moy_cart_c
+biais_r_moy_cart_inc
+
 

@@ -31,11 +31,11 @@ pop <- data.frame(
   x3 = x3
 )
 
-vrai_total <- round(sum(pop$y),1)
-vrai_total
+vrai_tot <- round(sum(pop$y),1)
+vrai_tot
 
-vrai_moyenne <- round(mean(pop$y),3)
-vrai_moyenne
+vrai_moy <- round(mean(pop$y),3)
+vrai_moy
 
 # Paramètres de la simulation
 
