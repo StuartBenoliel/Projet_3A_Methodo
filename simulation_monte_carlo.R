@@ -15,9 +15,9 @@ if (rho_target == 0.3){
   dossier_cor <- "cor_faible"
 } else if (rho_target == 0.5){
   if (theta3 == 0.3){
-    dossier_cor <- "cor_moyenne/effet_theta_faible/"
+    dossier_cor <- "cor_moyen_theta_faible"
   } else if (theta3 == 0.6){
-    dossier_cor <- "cor_moyenne/effet_theta_fort/"
+    dossier_cor <- "cor_moyen_theta_fort"
   } 
 } else if (rho_target == 0.8){
   dossier_cor <- "cor_elevee"
@@ -90,7 +90,7 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   labs(x = "", y = "Biais relatif des estimateurs du total de y") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
-ggsave(paste0("png/",dossier_cor,"/biais_total.png"), 
+ggsave(paste0("png/","/biais_tot_",dossier_cor,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300)
 
 
@@ -134,7 +134,7 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   labs(x = "", y = "Biais relatif des estimateurs de la moyenne de y") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
-ggsave(paste0("png/",dossier_cor,"/biais_moyenne.png"), 
+ggsave(paste0("png/","/biais_moy_",dossier_cor,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300)
 
 df %>%
