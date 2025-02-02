@@ -16,11 +16,10 @@ source(file = "fonction.R")
 # Pour l'échantillon non probabiliste
 
 # Tirage de Poisson avec pik selon un modèle logistique
-# pi = 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3 + theta4 * x4)))
+# pi = 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3)))
 ech_non_prob <- tirage_non_proba()
 summary(ech_non_prob$Prob)
 max(ech_non_prob$Prob) / min(ech_non_prob$Prob)
-
 
 # Pour l'échantillon probabiliste
 
@@ -33,13 +32,13 @@ max(ech_prob$Prob) / min(ech_prob$Prob)
 data <- rbind(ech_prob, ech_non_prob)
 
 modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
-                                 data = data, 
-                                 family = binomial)
+                                    data = data, 
+                                    family = binomial)
 summary(modele_participation_complet)
 
 modele_participation_incomplet <- glm(indic_participation ~ x1 + x2, 
-                                   data = data, 
-                                   family = binomial)
+                                      data = data, 
+                                      family = binomial)
 summary(modele_participation_incomplet)
 
 data$prob_participation_complet <- predict(modele_participation_complet, type = "response")
@@ -55,99 +54,69 @@ ech_non_prob <- data %>%
   mutate(rang_c = rank(prob_participation_complet),
          rang_inc = rank(prob_participation_incomplet))
 
-g1 <- ggplot(ech_prob, 
-             aes(x = rang_c, y = prob_participation_complet)) +
-  geom_point(color = "blue") +
-  labs(title = "Ech prob avec estimation sur le modèle complet",
-       x = "Rang",
-       y = "Probabilité de participation") +
-  theme_minimal()
-
-g2 <- ggplot(ech_prob, 
-             aes(x = rang_inc, y = prob_participation_incomplet)) +
-  geom_point(color = "blue") +
-  labs(title = "Ech prob avec estimation sur le modèle incomplet",
-       x = "Rang",
-       y = "Probabilité de participation") +
-  theme_minimal()
-
-g3 <- ggplot(ech_non_prob, 
-             aes(x = rang_c, y = prob_participation_complet)) +
-  geom_point(color = "red") +
-  labs(title = "Ech non prob avec estimation sur le modèle complet",
-       x = "Rang",
-       y = "Probabilité de participation") +
-  theme_minimal()
-
-g4 <- ggplot(ech_non_prob, 
-             aes(x = rang_inc, y = prob_participation_incomplet)) +
-  geom_point(color = "red") +
-  labs(title = "Ech non prob avec estimation sur le modèle incomplet",
-       x = "Rang",
-       y = "Probabilité de participation") +
-  theme_minimal()
-
-grid.arrange(g1, g2, g3, g4, ncol = 2)
-
 # Méthode nppCART
 
 cart_c <- nppCART(np.data = ech_non_prob, 
-                p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
-                sampling.weight = 'poids_sondage', predictors = c("x1", "x2", "x3"))
+                  p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
+                  sampling.weight = 'poids_sondage', predictors = c("x1", "x2", "x3"))
 
 cart_inc <- nppCART(np.data = ech_non_prob, 
-                  p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
-                  sampling.weight = 'poids_sondage', predictors = c("x1", "x2"))
+                    p.data = ech_prob %>% mutate(poids_sondage = 1/Prob), 
+                    sampling.weight = 'poids_sondage', predictors = c("x1", "x2"))
 
 ### Extract the nppCART-estimated propensities
 ech_non_prob <- ech_non_prob %>% 
   mutate(propensity_c = cart_c$get_npdata_with_propensity()$propensity,
          propensity_inc = cart_inc$get_npdata_with_propensity()$propensity)
 
-
-# On suppose 3 GHR
+# On suppose 10 GHR
 
 # Méthode de Frank : f(r_k) = log(1 + a*r_k / n_non_prob)
 log_a <- log(1 + a)
 
 ech_non_prob <- ech_non_prob %>% 
-  mutate(frank_c = log(1 + a*rang_c/nrow(ech_non_prob)),
-         frank_inc = log(1 + a*rang_inc/nrow(ech_non_prob))) %>% 
   mutate(
-    GHR_c = case_when(
-      frank_c <= log_a / nb_GHR ~ 1,
-      frank_c <= 2 * log_a / nb_GHR ~ 2,
-      frank_c <= 3 * log_a / nb_GHR ~ 3),
-    GHR_inc = case_when(
-      frank_inc <= log_a / nb_GHR ~ 1,
-      frank_inc <= 2 * log_a / nb_GHR ~ 2,
-      frank_inc <= 3 * log_a / nb_GHR ~ 3
-    ))
+    frank_c = log(1 + a * rang_c / nrow(ech_non_prob)),
+    frank_inc = log(1 + a * rang_inc / nrow(ech_non_prob))
+  ) %>% 
+  mutate(
+    GHR_c = cut(frank_c, 
+                breaks = seq(0, log_a, length.out = nb_GHR + 1), 
+                labels = 1:nb_GHR, 
+                include.lowest = TRUE) %>% as.integer(),
+    
+    GHR_inc = cut(frank_inc, 
+                  breaks = seq(0, log_a, length.out = nb_GHR + 1), 
+                  labels = 1:nb_GHR, 
+                  include.lowest = TRUE) %>% as.integer()
+  )
 
 table(ech_non_prob$GHR_c)
 table(ech_non_prob$GHR_inc)
 
 # Calcul des min, max et des points milieux dans ech_non_prob
-group_limits_c <- ech_non_prob %>%
-  group_by(GHR_c) %>%
-  summarise(
-    min_prob = min(prob_participation_complet),
-    max_prob = max(prob_participation_complet)
-  ) %>%
-  mutate(
-    pt = lead(min_prob),
-    midpoint_next = (max_prob + lead(min_prob)) / 2
+group_limits_c <- ech_non_prob %>% 
+  group_by(GHR_c) %>% 
+  summarise( 
+    min_prob = min(prob_participation_complet), 
+    max_prob = max(prob_participation_complet) 
+  ) %>% 
+  mutate( 
+    pt = lead(min_prob), 
+    midpoint_next = (max_prob + lead(min_prob)) / 2, 
+    label = ifelse(seq_along(max_prob) %% 2 == 0, NA, paste("GHR", seq_along(max_prob))) 
   )
 
-group_limits_inc <- ech_non_prob %>%
-  group_by(GHR_inc) %>%
-  summarise(
-    min_prob = min(prob_participation_incomplet),
-    max_prob = max(prob_participation_incomplet)
-  ) %>%
-  mutate(
-    pt = lead(min_prob),
-    midpoint_next = (max_prob + lead(min_prob)) / 2
+group_limits_inc <- ech_non_prob %>% 
+  group_by(GHR_inc) %>% 
+  summarise( 
+    min_prob = min(prob_participation_incomplet), 
+    max_prob = max(prob_participation_incomplet) 
+  ) %>% 
+  mutate( 
+    pt = lead(min_prob), 
+    midpoint_next = (max_prob + lead(min_prob)) / 2, 
+    label = ifelse(seq_along(max_prob) %% 2 == 0, NA, paste("GHR", seq_along(max_prob))) 
   )
 
 ech_prob <- ech_prob %>%
@@ -155,14 +124,28 @@ ech_prob <- ech_prob %>%
     GHR_c = case_when(
       prob_participation_complet < group_limits_c$midpoint_next[1] ~ 1,
       prob_participation_complet < group_limits_c$midpoint_next[2] ~ 2,
-      prob_participation_complet >= group_limits_c$midpoint_next[2] ~ 3
+      prob_participation_complet < group_limits_c$midpoint_next[3] ~ 3,
+      prob_participation_complet < group_limits_c$midpoint_next[4] ~ 4,
+      prob_participation_complet < group_limits_c$midpoint_next[5] ~ 5,
+      prob_participation_complet < group_limits_c$midpoint_next[6] ~ 6,
+      prob_participation_complet < group_limits_c$midpoint_next[7] ~ 7,
+      prob_participation_complet < group_limits_c$midpoint_next[8] ~ 8,
+      prob_participation_complet < group_limits_c$midpoint_next[9] ~ 9,
+      prob_participation_complet >= group_limits_c$midpoint_next[9] ~ 10
     ),
     GHR_inc = case_when(
       prob_participation_incomplet < group_limits_inc$midpoint_next[1] ~ 1,
       prob_participation_incomplet < group_limits_inc$midpoint_next[2] ~ 2,
-      prob_participation_incomplet >= group_limits_inc$midpoint_next[2] ~ 3
+      prob_participation_incomplet < group_limits_inc$midpoint_next[3] ~ 3,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[4] ~ 4,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[5] ~ 5,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[6] ~ 6,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[7] ~ 7,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[8] ~ 8,
+      prob_participation_incomplet < group_limits_inc$midpoint_next[9] ~ 9,
+      prob_participation_incomplet >= group_limits_inc$midpoint_next[9] ~ 10
     ),
-    produit = y/Prob
+    produit = y / Prob
   )
 
 table(ech_prob$GHR_c)
@@ -174,20 +157,87 @@ Ng_inc <- ech_prob %>% group_by(GHR_inc) %>% summarise(Ng = sum(1/Prob))
 ech_non_prob <- ech_non_prob %>% 
   mutate(
     poids_frank_c = case_when(
-      GHR_c == 1 ~ Ng_c$Ng[1]/nrow(ech_non_prob[ech_non_prob$GHR_c==1, ]),
-      GHR_c == 2 ~ Ng_c$Ng[2]/nrow(ech_non_prob[ech_non_prob$GHR_c==2, ]),
-      GHR_c == 3 ~ Ng_c$Ng[3]/nrow(ech_non_prob[ech_non_prob$GHR_c==3, ]),
+      GHR_c == 1 ~ Ng_c$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_c == 1, ]),
+      GHR_c == 2 ~ Ng_c$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_c == 2, ]),
+      GHR_c == 3 ~ Ng_c$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_c == 3, ]),
+      GHR_c == 4 ~ Ng_c$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_c == 4, ]),
+      GHR_c == 5 ~ Ng_c$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_c == 5, ]),
+      GHR_c == 6 ~ Ng_c$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_c == 6, ]),
+      GHR_c == 7 ~ Ng_c$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_c == 7, ]),
+      GHR_c == 8 ~ Ng_c$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_c == 8, ]),
+      GHR_c == 9 ~ Ng_c$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_c == 9, ]),
+      GHR_c == 10 ~ Ng_c$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_c == 10, ])
     ),
+    
     poids_frank_inc = case_when(
-      GHR_inc == 1 ~ Ng_inc$Ng[1]/nrow(ech_non_prob[ech_non_prob$GHR_inc==1, ]),
-      GHR_inc == 2 ~ Ng_inc$Ng[2]/nrow(ech_non_prob[ech_non_prob$GHR_inc==2, ]),
-      GHR_inc == 3 ~ Ng_inc$Ng[3]/nrow(ech_non_prob[ech_non_prob$GHR_inc==3, ]),
+      GHR_inc == 1 ~ Ng_inc$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 1, ]),
+      GHR_inc == 2 ~ Ng_inc$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 2, ]),
+      GHR_inc == 3 ~ Ng_inc$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 3, ]),
+      GHR_inc == 4 ~ Ng_inc$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 4, ]),
+      GHR_inc == 5 ~ Ng_inc$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 5, ]),
+      GHR_inc == 6 ~ Ng_inc$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 6, ]),
+      GHR_inc == 7 ~ Ng_inc$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 7, ]),
+      GHR_inc == 8 ~ Ng_inc$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 8, ]),
+      GHR_inc == 9 ~ Ng_inc$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 9, ]),
+      GHR_inc == 10 ~ Ng_inc$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 10, ])
     )
-    ) %>%
-  mutate(produit_frank_c = poids_frank_c * y,
-         produit_frank_inc = poids_frank_inc * y,
-         produit_cart_c = y / propensity_c,
-         produit_cart_inc = y / propensity_inc)
+  ) %>% 
+  mutate(
+    produit_frank_c = poids_frank_c * y,
+    produit_frank_inc = poids_frank_inc * y,
+    produit_cart_c = y / propensity_c,
+    produit_cart_inc = y / propensity_inc
+  )
+
+ech_prob$source <- "Probabiliste"
+ech_non_prob$source <- "Non probabiliste"
+
+# Fusionner les deux jeux de données
+data <- rbind(ech_prob %>% 
+                select(rang_c, rang_inc, prob_participation_complet,
+                       prob_participation_incomplet, source),
+              ech_non_prob %>% 
+                select(rang_c, rang_inc, prob_participation_complet,
+                       prob_participation_incomplet, source))
+
+# Graphique combiné
+plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet, color = source)) +
+  geom_point(alpha = 0.3) +
+  labs(title = "",
+       x = "Rang",
+       y = "Probabilité de participation estimée",
+       color = "Echantillon :") +
+  theme_minimal() +
+  scale_color_manual(values = c("Probabiliste" = "blue", 
+                                "Non probabiliste" = "red")) +
+  theme(legend.position = "top") + 
+  geom_segment(data = group_limits_c, aes(x = 0, xend = 5, y = max_prob, yend = max_prob),
+               color = "black", linewidth = 1.5, linetype = "dashed") +
+  geom_text(data = group_limits_c, aes(x = 20, y = max_prob, label = label), color = "black", size = 3, vjust = 0.3)
+
+plot
+
+ggsave(paste0("png/distrib_proba_selon_rang_c.png"), 
+       plot = plot, width = 8, height = 6, dpi = 300)
+
+plot <- ggplot(data) +
+  geom_point(aes(x = rang_inc, y = prob_participation_incomplet, color = source),
+             alpha = 0.3) +
+  labs(title = "",
+       x = "Rang",
+       y = "Probabilité de participation estimée",
+       color = "Echantillon :") +
+  theme_minimal() +
+  scale_color_manual(values = c("Probabiliste" = "blue", 
+                                "Non probabiliste" = "red")) +
+  theme(legend.position = "top") + 
+  geom_segment(data = group_limits_inc, aes(x = 0, xend = 5, y = max_prob, yend = max_prob),
+               color = "black", linewidth = 1.5, linetype = "dashed") +
+  geom_text(data = group_limits_inc, aes(x = 20, y = max_prob, label = label), color = "black", size = 3, vjust = 0.3)
+
+plot
+ggsave(paste0("png/distrib_proba_selon_rang_inc.png"), 
+       plot = plot, width = 8, height = 6, dpi = 300)
 
 # Calcul des estimateurs
 

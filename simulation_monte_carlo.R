@@ -11,6 +11,9 @@ set.seed(1)
 source(file = "parametre.R")
 source(file = "fonction.R")
 
+rho_target <- 0.5
+theta3 <- 0.3
+
 if (rho_target == 0.3){
   dossier_cor <- "cor_faible"
 } else if (rho_target == 0.5){

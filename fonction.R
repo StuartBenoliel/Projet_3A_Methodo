@@ -93,23 +93,26 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
     mutate(propensity_c = cart_c$get_npdata_with_propensity()$propensity,
            propensity_inc = cart_inc$get_npdata_with_propensity()$propensity)
   
-  # On suppose 3 GHR
+  # On suppose 10 GHR
   # Méthode de Frank : f(r_k) = log(1 + a*r_k / n_non_prob)
   log_a <- log(1 + a)
   
   ech_non_prob <- ech_non_prob %>% 
-    mutate(frank_c = log(1 + a*rang_c/nrow(ech_non_prob)),
-           frank_inc = log(1 + a*rang_inc/nrow(ech_non_prob))) %>% 
     mutate(
-      GHR_c = case_when(
-        frank_c <= log_a / nb_GHR ~ 1,
-        frank_c <= 2 * log_a / nb_GHR ~ 2,
-        frank_c <= 3 * log_a / nb_GHR ~ 3),
-      GHR_inc = case_when(
-        frank_inc <= log_a / nb_GHR ~ 1,
-        frank_inc <= 2 * log_a / nb_GHR ~ 2,
-        frank_inc <= 3 * log_a / nb_GHR ~ 3
-      ))
+      frank_c = log(1 + a * rang_c / nrow(ech_non_prob)),
+      frank_inc = log(1 + a * rang_inc / nrow(ech_non_prob))
+    ) %>% 
+    mutate(
+      GHR_c = cut(frank_c, 
+                  breaks = seq(0, log_a, length.out = nb_GHR + 1), 
+                  labels = 1:nb_GHR, 
+                  include.lowest = TRUE) %>% as.integer(),
+      
+      GHR_inc = cut(frank_inc, 
+                    breaks = seq(0, log_a, length.out = nb_GHR + 1), 
+                    labels = 1:nb_GHR, 
+                    include.lowest = TRUE) %>% as.integer()
+    )
   
   group_limits_c <- ech_non_prob %>%
     group_by(GHR_c) %>%
@@ -138,14 +141,28 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
       GHR_c = case_when(
         prob_participation_complet < group_limits_c$midpoint_next[1] ~ 1,
         prob_participation_complet < group_limits_c$midpoint_next[2] ~ 2,
-        prob_participation_complet >= group_limits_c$midpoint_next[2] ~ 3
+        prob_participation_complet < group_limits_c$midpoint_next[3] ~ 3,
+        prob_participation_complet < group_limits_c$midpoint_next[4] ~ 4,
+        prob_participation_complet < group_limits_c$midpoint_next[5] ~ 5,
+        prob_participation_complet < group_limits_c$midpoint_next[6] ~ 6,
+        prob_participation_complet < group_limits_c$midpoint_next[7] ~ 7,
+        prob_participation_complet < group_limits_c$midpoint_next[8] ~ 8,
+        prob_participation_complet < group_limits_c$midpoint_next[9] ~ 9,
+        prob_participation_complet >= group_limits_c$midpoint_next[9] ~ 10
       ),
       GHR_inc = case_when(
         prob_participation_incomplet < group_limits_inc$midpoint_next[1] ~ 1,
         prob_participation_incomplet < group_limits_inc$midpoint_next[2] ~ 2,
-        prob_participation_incomplet >= group_limits_inc$midpoint_next[2] ~ 3
+        prob_participation_incomplet < group_limits_inc$midpoint_next[3] ~ 3,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[4] ~ 4,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[5] ~ 5,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[6] ~ 6,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[7] ~ 7,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[8] ~ 8,
+        prob_participation_incomplet < group_limits_inc$midpoint_next[9] ~ 9,
+        prob_participation_incomplet >= group_limits_inc$midpoint_next[9] ~ 10
       ),
-      produit = y/Prob
+      produit = y / Prob
     )
   
   Ng_c <- ech_prob %>% group_by(GHR_c) %>% summarise(Ng = sum(1/Prob))
@@ -154,20 +171,37 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   ech_non_prob <- ech_non_prob %>% 
     mutate(
       poids_frank_c = case_when(
-        GHR_c == 1 ~ Ng_c$Ng[1]/nrow(ech_non_prob[ech_non_prob$GHR_c==1, ]),
-        GHR_c == 2 ~ Ng_c$Ng[2]/nrow(ech_non_prob[ech_non_prob$GHR_c==2, ]),
-        GHR_c == 3 ~ Ng_c$Ng[3]/nrow(ech_non_prob[ech_non_prob$GHR_c==3, ]),
+        GHR_c == 1 ~ Ng_c$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_c == 1, ]),
+        GHR_c == 2 ~ Ng_c$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_c == 2, ]),
+        GHR_c == 3 ~ Ng_c$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_c == 3, ]),
+        GHR_c == 4 ~ Ng_c$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_c == 4, ]),
+        GHR_c == 5 ~ Ng_c$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_c == 5, ]),
+        GHR_c == 6 ~ Ng_c$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_c == 6, ]),
+        GHR_c == 7 ~ Ng_c$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_c == 7, ]),
+        GHR_c == 8 ~ Ng_c$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_c == 8, ]),
+        GHR_c == 9 ~ Ng_c$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_c == 9, ]),
+        GHR_c == 10 ~ Ng_c$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_c == 10, ])
       ),
+      
       poids_frank_inc = case_when(
-        GHR_inc == 1 ~ Ng_inc$Ng[1]/nrow(ech_non_prob[ech_non_prob$GHR_inc==1, ]),
-        GHR_inc == 2 ~ Ng_inc$Ng[2]/nrow(ech_non_prob[ech_non_prob$GHR_inc==2, ]),
-        GHR_inc == 3 ~ Ng_inc$Ng[3]/nrow(ech_non_prob[ech_non_prob$GHR_inc==3, ]),
+        GHR_inc == 1 ~ Ng_inc$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 1, ]),
+        GHR_inc == 2 ~ Ng_inc$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 2, ]),
+        GHR_inc == 3 ~ Ng_inc$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 3, ]),
+        GHR_inc == 4 ~ Ng_inc$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 4, ]),
+        GHR_inc == 5 ~ Ng_inc$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 5, ]),
+        GHR_inc == 6 ~ Ng_inc$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 6, ]),
+        GHR_inc == 7 ~ Ng_inc$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 7, ]),
+        GHR_inc == 8 ~ Ng_inc$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 8, ]),
+        GHR_inc == 9 ~ Ng_inc$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 9, ]),
+        GHR_inc == 10 ~ Ng_inc$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 10, ])
       )
-    ) %>%
-    mutate(produit_frank_c = poids_frank_c * y,
-           produit_frank_inc = poids_frank_inc * y,
-           produit_cart_c = y / propensity_c,
-           produit_cart_inc = y / propensity_inc)
+    ) %>% 
+    mutate(
+      produit_frank_c = poids_frank_c * y,
+      produit_frank_inc = poids_frank_inc * y,
+      produit_cart_c = y / propensity_c,
+      produit_cart_inc = y / propensity_inc
+    )
   
   tot_prob <- round(sum(ech_prob$produit),1)
   tot_naif <- round(sum(ech_non_prob$y)*N/n_non_prob,1)
