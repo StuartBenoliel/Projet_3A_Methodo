@@ -29,7 +29,7 @@ plot <- ggplot(data, aes(x = y, fill = rho, color = rho)) +
 
 plot
 ggsave(paste0("png/distrib_y_selon_correlation.png"), 
-       plot = plot, width = 8, height = 6, dpi = 300)
+       plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 #########
 
@@ -93,4 +93,4 @@ plot2 <- ggplot(pop_long[pop_long$theta3 == 0.6, ], aes(x = Prob)) +
 # Utiliser grid.arrange pour organiser les deux graphiques l'un en dessous de l'autre
 plot <- grid.arrange(plot1, plot2, nrow = 2)
 ggsave(paste0("png/distrib_proba_np.png"), 
-       plot = plot, width = 8, height = 8, dpi = 300)
+       plot = plot, width = 8, height = 8, dpi = 300, bg= "white")

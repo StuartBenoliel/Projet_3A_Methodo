@@ -94,7 +94,7 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
 ggsave(paste0("png/","/biais_tot_",dossier_cor,".png"), 
-       plot = plot, width = 8, height = 6, dpi = 300)
+       plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 
 df_long <- df %>% 
@@ -138,7 +138,7 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
 ggsave(paste0("png/","/biais_moy_",dossier_cor,".png"), 
-       plot = plot, width = 8, height = 6, dpi = 300)
+       plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 df %>%
   summarise(across(everything(), 

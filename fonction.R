@@ -12,9 +12,8 @@ tirage_non_proba <- function() {
   
   # Tirage de Poisson avec pik selon un modèle logistique
   pop$Prob <- 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3)))
-  
   ech_non_prob <- sampling::UPpoisson(pop$Prob)
-  ech_non_prob <- getdata(pop, ech_non_prob)  %>% 
+  ech_non_prob <- getdata(pop, ech_non_prob) %>% 
     mutate(indic_participation = 1)
 }
 
@@ -55,7 +54,9 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   type_tirage <- 'Stratifié'
   ech_prob <- tirage_proba(type = type_tirage)
   
-  data <- rbind(ech_prob, ech_non_prob)
+  data <- rbind(ech_prob, ech_non_prob) %>%
+    arrange(desc(indic_participation)) %>%  # Priorise indic_participation == 1
+    distinct(ID_unit, .keep_all = TRUE)  
   
   modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
                                       data = data, 

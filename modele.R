@@ -29,7 +29,9 @@ ech_prob <- tirage_proba(type = type_tirage)
 summary(ech_prob$Prob)
 max(ech_prob$Prob) / min(ech_prob$Prob)
 
-data <- rbind(ech_prob, ech_non_prob)
+data <- rbind(ech_prob, ech_non_prob) %>%
+  arrange(desc(indic_participation)) %>%  # Priorise indic_participation == 1
+  distinct(ID_unit, .keep_all = TRUE)  
 
 modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
                                     data = data, 
@@ -218,7 +220,7 @@ plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet, color = sou
 plot
 
 ggsave(paste0("png/distrib_proba_selon_rang_c.png"), 
-       plot = plot, width = 8, height = 6, dpi = 300)
+       plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 plot <- ggplot(data) +
   geom_point(aes(x = rang_inc, y = prob_participation_incomplet, color = source),
@@ -237,7 +239,7 @@ plot <- ggplot(data) +
 
 plot
 ggsave(paste0("png/distrib_proba_selon_rang_inc.png"), 
-       plot = plot, width = 8, height = 6, dpi = 300)
+       plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 # Calcul des estimateurs
 
