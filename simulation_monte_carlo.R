@@ -11,15 +11,15 @@ set.seed(1)
 source(file = "parametre.R")
 source(file = "fonction.R")
 
-rho_target <- 0.5
-theta3 <- 0.3
+rho_target <- 0.3
+theta3 <- 0.1
 
 if (rho_target == 0.3){
   dossier_cor <- "cor_faible"
 } else if (rho_target == 0.5){
-  if (theta3 == 0.3){
+  if (theta3 == 0.1){
     dossier_cor <- "cor_moyen_theta_faible"
-  } else if (theta3 == 0.6){
+  } else if (theta3 == 0.3){
     dossier_cor <- "cor_moyen_theta_fort"
   } 
 } else if (rho_target == 0.8){
@@ -32,11 +32,16 @@ df <- data.frame(
   biais_r_tot_frank_c = numeric(0), biais_r_tot_frank_inc = numeric(0),
   biais_r_tot_cart_c = numeric(0), biais_r_tot_cart_inc = numeric(0),
   biais_r_moy_frank_prob = numeric(0), biais_r_moy_frank_naif = numeric(0),
-  biais_r_moy_cart_c = numeric(0), biais_r_moy_cart_inc = numeric(0)
+  biais_r_moy_cart_c = numeric(0), biais_r_moy_cart_inc = numeric(0),
+  erreur_carre_tot_prob = numeric(0), erreur_carre_tot_naif = numeric(0),
+  erreur_carre_tot_frank_c = numeric(0), erreur_carre_tot_frank_inc = numeric(0),
+  erreur_carre_tot_cart_c = numeric(0), erreur_carre_tot_cart_inc = numeric(0),
+  erreur_carre_moy_frank_prob = numeric(0), erreur_carre_moy_frank_naif = numeric(0),
+  erreur_carre_moy_cart_c = numeric(0), erreur_carre_moy_cart_inc = numeric(0)
 )
 
 # nombre de simulations
-n_simu <- 100
+n_simu <- 500
 
 for (i in 1:n_simu){
   vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob,
@@ -49,7 +54,13 @@ for (i in 1:n_simu){
     biais_r_tot_cart_c = vec[5], biais_r_tot_cart_inc = vec[6],
     biais_r_moy_prob = vec[7], biais_r_moy_naif = vec[8],
     biais_r_moy_frank_c = vec[9], biais_r_moy_frank_inc = vec[10],
-    biais_r_moy_cart_c = vec[11], biais_r_moy_cart_inc = vec[12]
+    biais_r_moy_cart_c = vec[11], biais_r_moy_cart_inc = vec[12],
+    erreur_carre_tot_prob = vec[13], erreur_carre_tot_naif = vec[14],
+    erreur_carre_tot_frank_c = vec[15], erreur_carre_tot_frank_inc = vec[16],
+    erreur_carre_tot_cart_c = vec[17], erreur_carre_tot_cart_inc = vec[18],
+    erreur_carre_moy_frank_prob = vec[19], erreur_carre_moy_frank_naif = vec[20],
+    erreur_carre_moy_cart_c = vec[21], erreur_carre_moy_cart_inc = vec[22]
+    
   ))
 }
 
@@ -142,7 +153,7 @@ ggsave(paste0("png/","/biais_moy_",dossier_cor,".png"),
 
 df %>%
   summarise(across(everything(), 
-                   list(mean = ~ mean(.), sd = ~ sd(.)))) %>%
+                   list(mean = ~ mean(.)))) %>%
   pivot_longer(cols = everything(), 
                names_to = c("variable", ".value"), 
                names_pattern = "^(.*)_(mean|sd)$")

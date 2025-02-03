@@ -45,10 +45,10 @@ n_prob <- 500
 n_non_prob <- 500
 
 # Paramètres pour la définition des vrai proba d'inclusion (inconnu) pour l'échantillon non proba
-theta1 <- 0.2
-theta2 <- 0.4
-# 0.6 ou 0.3
-theta3 <- 0.6
+theta1 <- 0.1
+theta2 <- 0.2
+# 0.1 ou 0.3
+theta3 <- 0.3
 
 # Paramètre du modèle de Frank
 a <- 10

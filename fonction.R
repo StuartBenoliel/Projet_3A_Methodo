@@ -218,6 +218,13 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   biais_r_tot_cart_c <- round(100*(tot_cart_c - vrai_tot)/vrai_tot,3)
   biais_r_tot_cart_inc <- round(100*(tot_cart_inc - vrai_tot)/vrai_tot,3)
   
+  erreur_carre_tot_prob <- (tot_prob - vrai_tot)^2
+  erreur_carre_tot_naif <- (tot_naif - vrai_tot)^2
+  erreur_carre_tot_frank_c <- (tot_frank_c - vrai_tot)^2
+  erreur_carre_tot_frank_inc <- (tot_frank_inc - vrai_tot)^2
+  erreur_carre_tot_cart_c <- (tot_cart_c - vrai_tot)^2
+  erreur_carre_tot_cart_inc <- (tot_cart_inc - vrai_tot)^2
+  
   moy_prob <- round(sum(ech_prob$produit) / sum(1/ech_prob$Prob),3)
   moy_naif <- mean(ech_non_prob$y)
   moy_frank_c <- round(sum(ech_non_prob$produit_frank_c) / sum(ech_non_prob$poids_frank_c),3)
@@ -232,10 +239,23 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   biais_r_moy_cart_c <- round(100*(moy_cart_c - vrai_moy)/vrai_moy,3)
   biais_r_moy_cart_inc <- round(100*(moy_cart_inc - vrai_moy)/vrai_moy,3)
   
+  erreur_carre_moy_prob <- (moy_prob - vrai_moy)^2
+  erreur_carre_moy_naif <- (moy_naif - vrai_moy)^2
+  erreur_carre_moy_frank_c <- (moy_frank_c - vrai_moy)^2
+  erreur_carre_moy_frank_inc <- (moy_frank_inc - vrai_moy)^2
+  erreur_carre_moy_cart_c <- (moy_cart_c - vrai_moy)^2
+  erreur_carre_moy_cart_inc <- (moy_cart_inc - vrai_moy)^2
+  
   return(c(biais_r_tot_prob, biais_r_tot_naif,
            biais_r_tot_frank_c, biais_r_tot_frank_inc,
            biais_r_tot_cart_c, biais_r_tot_cart_inc, 
            biais_r_moy_prob, biais_r_moy_naif,
            biais_r_moy_frank_c, biais_r_moy_frank_inc,
-           biais_r_moy_cart_c, biais_r_moy_cart_inc))
+           biais_r_moy_cart_c, biais_r_moy_cart_inc, 
+           erreur_carre_tot_prob, erreur_carre_tot_naif,
+           erreur_carre_tot_frank_c, erreur_carre_tot_frank_inc,
+           erreur_carre_tot_cart_c, erreur_carre_tot_cart_inc, 
+           erreur_carre_moy_prob, erreur_carre_moy_naif,
+           erreur_carre_moy_frank_c, erreur_carre_moy_frank_inc,
+           erreur_carre_moy_cart_c, erreur_carre_moy_cart_inc))
 }
