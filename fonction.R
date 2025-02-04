@@ -54,23 +54,33 @@ fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
   type_tirage <- 'Stratifié'
   ech_prob <- tirage_proba(type = type_tirage)
   
-  data <- rbind(ech_prob, ech_non_prob) %>%
+  data <- rbind(ech_prob, ech_non_prob) 
+  
+  id_doublons <- data %>%
+    group_by(ID_unit) %>%
+    filter(n() > 1) %>%
+    pull(ID_unit) %>%
+    unique() 
+  
+  data <- data %>%
     arrange(desc(indic_participation)) %>%  # Priorise indic_participation == 1
-    distinct(ID_unit, .keep_all = TRUE)  
+    distinct(ID_unit, .keep_all = TRUE) 
   
   modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
                                       data = data, 
                                       family = binomial)
+  summary(modele_participation_complet)
   
   modele_participation_incomplet <- glm(indic_participation ~ x1 + x2, 
                                         data = data, 
                                         family = binomial)
+  summary(modele_participation_incomplet)
   
   data$prob_participation_complet <- predict(modele_participation_complet, type = "response")
   data$prob_participation_incomplet <- predict(modele_participation_incomplet, type = "response")
   
   ech_prob <- data %>% 
-    filter(indic_participation == 0) %>% 
+    filter(ID_unit %in% id_doublons | indic_participation == 0) %>% 
     mutate(rang_c = rank(prob_participation_complet),
            rang_inc = rank(prob_participation_incomplet))
   

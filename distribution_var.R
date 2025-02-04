@@ -33,7 +33,7 @@ ggsave(paste0("png/distrib_y_selon_correlation.png"),
 
 #########
 
-# 0.6 ou 0.3
+# 0.1 ou 0.3
 theta3_values <- c(0.1, 0.3)
 
 sum_pik <- function(theta0, theta3) {
@@ -56,7 +56,7 @@ pop_long <- do.call(rbind, lapply(1:length(theta3_values), function(i) {
   
   return(pop)
 }))
-
+summary(pop_long %>% filter(theta3==0.3))
 library(gridExtra)
 # Plage de données (limites de l'axe x)
 x_limits <- c(0, 0.06)
@@ -69,7 +69,7 @@ plot1 <- ggplot(pop_long[pop_long$theta3 == 0.1, ], aes(x = Prob)) +
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  binwidth = bin_width, fill = "#69b3a2", color = "white", alpha = 0.8) + 
   coord_cartesian(xlim = x_limits) + 
-  labs(title = expression(theta[3] == 0.1), 
+  labs(title = expression(beta == 0.1), 
        x = "", 
        y = "Fréquence")+ 
   theme_minimal(base_size = 10) + 
@@ -83,7 +83,7 @@ plot2 <- ggplot(pop_long[pop_long$theta3 == 0.3, ], aes(x = Prob)) +
                  binwidth = bin_width, fill = "#69b3a2", color = "white", alpha = 0.8) + 
   coord_cartesian(xlim = x_limits) + 
   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-  labs(title = expression(theta[3] == 0.3), 
+  labs(title = expression(beta == 0.3), 
        x = "Probabilité de participation à l'échantillon non probabiliste pour la population U",
        y = "Fréquence") + 
   theme_minimal(base_size = 10) + 
