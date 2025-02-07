@@ -53,4 +53,4 @@ theta3 <- 0.3
 # Paramètre du modèle de Frank
 a <- 10
 # Nombres de groupes homogènes de réponse
-nb_GHR <- 10
+nb_GHR <- 4

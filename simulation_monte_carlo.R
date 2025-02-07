@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(gridExtra)
 library(tidyr)
+library(pracma)
 library(nppR)
 
 rm(list=ls())
@@ -26,15 +27,19 @@ if (rho_target == 0.3){
 # dataframe contenant les résultats des simulations
 df <- data.frame(
   biais_r_tot_prob = numeric(0), biais_r_tot_naif = numeric(0),
+  biais_r_tot_logit_c = numeric(0), biais_r_tot_logit_inc = numeric(0),
   biais_r_tot_frank_c = numeric(0), biais_r_tot_frank_inc = numeric(0),
   biais_r_tot_cart_c = numeric(0), biais_r_tot_cart_inc = numeric(0),
   biais_r_moy_prob = numeric(0), biais_r_moy_naif = numeric(0),
+  biais_r_moy_logit_c = numeric(0), biais_r_moy_logit_inc = numeric(0),
   biais_r_moy_frank_c = numeric(0), biais_r_moy_frank_inc = numeric(0),
   biais_r_moy_cart_c = numeric(0), biais_r_moy_cart_inc = numeric(0),
   erreur_carre_tot_prob = numeric(0), erreur_carre_tot_naif = numeric(0),
+  erreur_carre_tot_logit_c = numeric(0), erreur_carre_tot_logit_inc = numeric(0),
   erreur_carre_tot_frank_c = numeric(0), erreur_carre_tot_frank_inc = numeric(0),
   erreur_carre_tot_cart_c = numeric(0), erreur_carre_tot_cart_inc = numeric(0),
   erreur_carre_moy_prob = numeric(0), erreur_carre_moy_naif = numeric(0),
+  erreur_carre_moy_logit_c = numeric(0), erreur_carre_moy_logit_inc = numeric(0),
   erreur_carre_moy_frank_c = numeric(0), erreur_carre_moy_frank_inc = numeric(0),
   erreur_carre_moy_cart_c = numeric(0), erreur_carre_moy_cart_inc = numeric(0)
 )
@@ -49,18 +54,21 @@ for (i in 1:n_simu){
   
   df <- rbind(df, data.frame(
     biais_r_tot_prob = vec[1], biais_r_tot_naif = vec[2],
-    biais_r_tot_frank_c = vec[3], biais_r_tot_frank_inc = vec[4],
-    biais_r_tot_cart_c = vec[5], biais_r_tot_cart_inc = vec[6],
-    biais_r_moy_prob = vec[7], biais_r_moy_naif = vec[8],
-    biais_r_moy_frank_c = vec[9], biais_r_moy_frank_inc = vec[10],
-    biais_r_moy_cart_c = vec[11], biais_r_moy_cart_inc = vec[12],
-    erreur_carre_tot_prob = vec[13], erreur_carre_tot_naif = vec[14],
-    erreur_carre_tot_frank_c = vec[15], erreur_carre_tot_frank_inc = vec[16],
-    erreur_carre_tot_cart_c = vec[17], erreur_carre_tot_cart_inc = vec[18],
-    erreur_carre_moy_prob = vec[19], erreur_carre_moy_naif = vec[20],
-    erreur_carre_moy_frank_c = vec[21], erreur_carre_moy_frank_inc = vec[22],
-    erreur_carre_moy_cart_c = vec[23], erreur_carre_moy_cart_inc = vec[24]
-    
+    biais_r_tot_logit_c = vec[3], biais_r_tot_logit_inc = vec[4],
+    biais_r_tot_frank_c = vec[5], biais_r_tot_frank_inc = vec[6],
+    biais_r_tot_cart_c = vec[7], biais_r_tot_cart_inc = vec[8],
+    biais_r_moy_prob = vec[9], biais_r_moy_naif = vec[10],
+    biais_r_moy_logit_c = vec[11], biais_r_moy_logit_inc = vec[12],
+    biais_r_moy_frank_c = vec[13], biais_r_moy_frank_inc = vec[14],
+    biais_r_moy_cart_c = vec[15], biais_r_moy_cart_inc = vec[16],
+    erreur_carre_tot_prob = vec[17], erreur_carre_tot_naif = vec[18],
+    erreur_carre_tot_logit_c = vec[19], erreur_carre_tot_logit_inc = vec[20],
+    erreur_carre_tot_frank_c = vec[21], erreur_carre_tot_frank_inc = vec[22],
+    erreur_carre_tot_cart_c = vec[23], erreur_carre_tot_cart_inc = vec[24],
+    erreur_carre_moy_prob = vec[25], erreur_carre_moy_naif = vec[26],
+    erreur_carre_moy_logit_c = vec[27], erreur_carre_moy_logit_inc = vec[28],
+    erreur_carre_moy_frank_c = vec[29], erreur_carre_moy_frank_inc = vec[30],
+    erreur_carre_moy_cart_c = vec[31], erreur_carre_moy_cart_inc = vec[32]
   ))
 }
 
@@ -70,10 +78,10 @@ resultat <- df %>%
   pivot_longer(cols = everything(), 
                names_to = c("variable", ".value"), 
                names_pattern = "^(.*)_(mean|sd)$") %>% 
-  mutate(RMSE = if_else(row_number() %in% 13:24, sqrt(mean), NA_real_))
+  mutate(RRMSE = if_else(row_number() %in% 17:32, sqrt(mean), NA_real_))
 
-resultat[1:12,]
-resultat[13:24,]
+resultat[1:16,]
+resultat[17:32,]
 
 
 df_long <- df %>% 

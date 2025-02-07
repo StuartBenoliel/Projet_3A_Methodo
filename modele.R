@@ -2,10 +2,11 @@ library(sampling)
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
-
+library(pracma)
 # install.packages(pkgs = c("devtools"))
 # devtools::install_github("StatCan/nppR")
 library(nppR)
+library(ggrepel)
 
 rm(list=ls())
 set.seed(1)
@@ -29,39 +30,34 @@ ech_prob <- tirage_proba(type = type_tirage)
 summary(ech_prob$Prob)
 max(ech_prob$Prob) / min(ech_prob$Prob)
 
-data <- rbind(ech_prob, ech_non_prob) 
+tot_np <- ech_non_prob %>% 
+  summarise(tot_1 = sum(x1),
+            tot_2 = sum(x2),
+            tot_3 = sum(x3)) %>%
+  as.numeric()
+tot_np
 
-id_doublons <- data %>%
-  group_by(ID_unit) %>%
-  filter(n() > 1) %>%
-  pull(ID_unit) %>%
-  unique() 
+alpha_complet <- newtonsys(U_complet, c(0, 0, 0), data = ech_prob, tot_np = tot_np)
+alpha_incomplet <- newtonsys(U_incomplet, c(0, 0), data = ech_prob, tot_np = tot_np)
 
-data <- data %>%
-  arrange(desc(indic_participation)) %>%  # Priorise indic_participation == 1
-  distinct(ID_unit, .keep_all = TRUE) 
-
-modele_participation_complet <- glm(indic_participation ~ x1 + x2 + x3, 
-                                    data = data, 
-                                    family = binomial)
-summary(modele_participation_complet)
-
-modele_participation_incomplet <- glm(indic_participation ~ x1 + x2, 
-                                      data = data, 
-                                      family = binomial)
-summary(modele_participation_incomplet)
-
-data$prob_participation_complet <- predict(modele_participation_complet, type = "response")
-data$prob_participation_incomplet <- predict(modele_participation_incomplet, type = "response")
-
-ech_prob <- data %>% 
-  filter(ID_unit %in% id_doublons | indic_participation == 0) %>% 
-  mutate(rang_c = rank(prob_participation_complet),
+ech_prob <- ech_prob %>% 
+  mutate(prob_participation_complet =
+           1 / (1 + exp(-as.matrix(ech_prob[, c("x1", "x2", "x3")]) %*% 
+                          alpha_complet$zero)),
+         prob_participation_incomplet =
+           1 / (1 + exp(-as.matrix(ech_prob[, c("x1", "x2")]) %*% 
+                          alpha_incomplet$zero)),
+         rang_c = rank(prob_participation_complet),
          rang_inc = rank(prob_participation_incomplet))
 
-ech_non_prob <- data %>% 
-  filter(indic_participation == 1) %>% 
-  mutate(rang_c = rank(prob_participation_complet),
+ech_non_prob <- ech_non_prob %>% 
+  mutate(prob_participation_complet =
+           1 / (1 + exp(-as.matrix(ech_non_prob[, c("x1", "x2", "x3")]) %*% 
+                          alpha_complet$zero)),
+         prob_participation_incomplet =
+           1 / (1 + exp(-as.matrix(ech_non_prob[, c("x1", "x2")]) %*% 
+                          alpha_incomplet$zero)),
+         rang_c = rank(prob_participation_complet),
          rang_inc = rank(prob_participation_incomplet))
 
 # Méthode nppCART
@@ -79,7 +75,7 @@ ech_non_prob <- ech_non_prob %>%
   mutate(propensity_c = cart_c$get_npdata_with_propensity()$propensity,
          propensity_inc = cart_inc$get_npdata_with_propensity()$propensity)
 
-# On suppose 10 GHR
+# On suppose 4 GHR
 
 # Méthode de Frank : f(r_k) = log(1 + a*r_k / n_non_prob)
 log_a <- log(1 + a)
@@ -105,28 +101,26 @@ table(ech_non_prob$GHR_c)
 table(ech_non_prob$GHR_inc)
 
 # Calcul des min, max et des points milieux dans ech_non_prob
-group_limits_c <- ech_non_prob %>% 
-  group_by(GHR_c) %>% 
-  summarise( 
-    min_prob = min(prob_participation_complet), 
-    max_prob = max(prob_participation_complet) 
-  ) %>% 
-  mutate( 
-    pt = lead(min_prob), 
-    midpoint_next = (max_prob + lead(min_prob)) / 2, 
-    label = ifelse(seq_along(max_prob) %% 2 == 0, NA, paste("GHR", seq_along(max_prob))) 
+group_limits_c <- ech_non_prob %>%
+  group_by(GHR_c) %>%
+  summarise(
+    min_prob = min(prob_participation_complet),
+    max_prob = max(prob_participation_complet)
+  ) %>%
+  mutate(
+    pt = lead(min_prob),
+    midpoint_next = (max_prob + lead(min_prob)) / 2
   )
 
-group_limits_inc <- ech_non_prob %>% 
-  group_by(GHR_inc) %>% 
-  summarise( 
-    min_prob = min(prob_participation_incomplet), 
-    max_prob = max(prob_participation_incomplet) 
-  ) %>% 
-  mutate( 
-    pt = lead(min_prob), 
-    midpoint_next = (max_prob + lead(min_prob)) / 2, 
-    label = ifelse(seq_along(max_prob) %% 2 == 0, NA, paste("GHR", seq_along(max_prob))) 
+group_limits_inc <- ech_non_prob %>%
+  group_by(GHR_inc) %>%
+  summarise(
+    min_prob = min(prob_participation_incomplet),
+    max_prob = max(prob_participation_incomplet)
+  ) %>%
+  mutate(
+    pt = lead(min_prob),
+    midpoint_next = (max_prob + lead(min_prob)) / 2
   )
 
 ech_prob <- ech_prob %>%
@@ -135,25 +129,13 @@ ech_prob <- ech_prob %>%
       prob_participation_complet < group_limits_c$midpoint_next[1] ~ 1,
       prob_participation_complet < group_limits_c$midpoint_next[2] ~ 2,
       prob_participation_complet < group_limits_c$midpoint_next[3] ~ 3,
-      prob_participation_complet < group_limits_c$midpoint_next[4] ~ 4,
-      prob_participation_complet < group_limits_c$midpoint_next[5] ~ 5,
-      prob_participation_complet < group_limits_c$midpoint_next[6] ~ 6,
-      prob_participation_complet < group_limits_c$midpoint_next[7] ~ 7,
-      prob_participation_complet < group_limits_c$midpoint_next[8] ~ 8,
-      prob_participation_complet < group_limits_c$midpoint_next[9] ~ 9,
-      prob_participation_complet >= group_limits_c$midpoint_next[9] ~ 10
+      prob_participation_complet >= group_limits_c$midpoint_next[3] ~ 4
     ),
     GHR_inc = case_when(
       prob_participation_incomplet < group_limits_inc$midpoint_next[1] ~ 1,
       prob_participation_incomplet < group_limits_inc$midpoint_next[2] ~ 2,
       prob_participation_incomplet < group_limits_inc$midpoint_next[3] ~ 3,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[4] ~ 4,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[5] ~ 5,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[6] ~ 6,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[7] ~ 7,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[8] ~ 8,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[9] ~ 9,
-      prob_participation_incomplet >= group_limits_inc$midpoint_next[9] ~ 10
+      prob_participation_incomplet >= group_limits_inc$midpoint_next[3] ~ 4
     ),
     produit = y / Prob
   )
@@ -170,29 +152,19 @@ ech_non_prob <- ech_non_prob %>%
       GHR_c == 1 ~ Ng_c$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_c == 1, ]),
       GHR_c == 2 ~ Ng_c$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_c == 2, ]),
       GHR_c == 3 ~ Ng_c$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_c == 3, ]),
-      GHR_c == 4 ~ Ng_c$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_c == 4, ]),
-      GHR_c == 5 ~ Ng_c$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_c == 5, ]),
-      GHR_c == 6 ~ Ng_c$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_c == 6, ]),
-      GHR_c == 7 ~ Ng_c$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_c == 7, ]),
-      GHR_c == 8 ~ Ng_c$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_c == 8, ]),
-      GHR_c == 9 ~ Ng_c$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_c == 9, ]),
-      GHR_c == 10 ~ Ng_c$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_c == 10, ])
+      GHR_c == 4 ~ Ng_c$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_c == 4, ])
     ),
     
     poids_frank_inc = case_when(
       GHR_inc == 1 ~ Ng_inc$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 1, ]),
       GHR_inc == 2 ~ Ng_inc$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 2, ]),
       GHR_inc == 3 ~ Ng_inc$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 3, ]),
-      GHR_inc == 4 ~ Ng_inc$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 4, ]),
-      GHR_inc == 5 ~ Ng_inc$Ng[5] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 5, ]),
-      GHR_inc == 6 ~ Ng_inc$Ng[6] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 6, ]),
-      GHR_inc == 7 ~ Ng_inc$Ng[7] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 7, ]),
-      GHR_inc == 8 ~ Ng_inc$Ng[8] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 8, ]),
-      GHR_inc == 9 ~ Ng_inc$Ng[9] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 9, ]),
-      GHR_inc == 10 ~ Ng_inc$Ng[10] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 10, ])
+      GHR_inc == 4 ~ Ng_inc$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 4, ])
     )
   ) %>% 
   mutate(
+    produit_logit_c = y / prob_participation_complet,
+    produit_logit_inc = y / prob_participation_incomplet,
     produit_frank_c = poids_frank_c * y,
     produit_frank_inc = poids_frank_inc * y,
     produit_cart_c = y / propensity_c,
@@ -205,45 +177,81 @@ ech_non_prob$source <- "Non probabiliste"
 # Fusionner les deux jeux de données
 data <- rbind(ech_prob %>% 
                 select(rang_c, rang_inc, prob_participation_complet,
-                       prob_participation_incomplet, source),
+                       prob_participation_incomplet, GHR_c, GHR_inc, source),
               ech_non_prob %>% 
                 select(rang_c, rang_inc, prob_participation_complet,
-                       prob_participation_incomplet, source))
+                       prob_participation_incomplet, GHR_c, GHR_inc, source))
 
-# Graphique combiné
-plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet, color = source)) +
-  geom_point(alpha = 0.3) +
-  labs(title = "",
-       x = "Rang",
-       y = "Probabilité de participation estimée",
-       color = "Echantillon :") +
-  theme_minimal() +
-  scale_color_manual(values = c("Probabiliste" = "blue", 
-                                "Non probabiliste" = "red")) +
-  theme(legend.position = "top") + 
-  geom_segment(data = group_limits_c, aes(x = 0, xend = 5, y = max_prob, yend = max_prob),
-               color = "black", linewidth = 1.5, linetype = "dashed") +
-  geom_text(data = group_limits_c, aes(x = 20, y = max_prob, label = label), color = "black", size = 3, vjust = 0.3)
+data <- data %>%
+  arrange(prob_participation_complet)
+
+# Récupérer les indices pour les valeurs à annoter
+indices <- c(1, round(nrow(data)/4), round(2*nrow(data)/4), 
+             round(3*nrow(data)/4), nrow(data))
+
+# Ajouter les labels arrondis à 2 chiffres significatifs
+selected_values <- data[indices, ] %>%
+  mutate(label = format(prob_participation_complet, digits = 2, scientific = TRUE))
+
+
+# Graphique avec annotations des valeurs sélectionnées
+plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet,  
+                         color = as.factor(GHR_c), shape = source)) + 
+  geom_point(alpha = 0.6, size = 2.5) + 
+  geom_text_repel(data = selected_values, aes(label = label), 
+                  size = 4, show.legend = FALSE, color = "black",
+                  nudge_y = 0.05,  # Décalage vertical pour éviter les chevauchements
+                  box.padding = 4,  # Ajoute de l'espace autour du texte
+                  max.overlaps = 10) +
+  scale_y_log10() +  # Échelle logarithmique
+  labs(title = "", 
+       x = "Rang", 
+       y = "Probabilité de participation estimée", 
+       color = "GHR :", 
+       shape = "Échantillon :") + 
+  theme_minimal() + 
+  scale_color_manual(values = c("1" = "#2674DD", 
+                                "2" = "#42BB65", 
+                                "3" = "#FFC300",  
+                                "4" = "#E91422")) + 
+  scale_shape_manual(values = c("Probabiliste" = 16, 
+                                "Non probabiliste" = 17)) + 
+  theme(legend.position = "top")
 
 plot
 
 ggsave(paste0("png/distrib_proba_selon_rang_c.png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
-plot <- ggplot(data) +
-  geom_point(aes(x = rang_inc, y = prob_participation_incomplet, color = source),
-             alpha = 0.3) +
+data <- data %>%
+  arrange(prob_participation_incomplet)
+
+# Ajouter les labels arrondis à 2 chiffres significatifs
+selected_values <- data[indices, ] %>%
+  mutate(label = format(prob_participation_incomplet, digits = 2, scientific = TRUE))
+
+plot <- ggplot(data, aes(x = rang_inc, y = prob_participation_incomplet, 
+                         color = as.factor(GHR_inc), shape = source)) +
+  geom_point(alpha = 0.6, size= 2.5) +
+  geom_text_repel(data = selected_values, aes(label = label), 
+                  size = 4, show.legend = FALSE, color = "black",
+                  nudge_y = 0.05,  # Décalage vertical pour éviter les chevauchements
+                  box.padding = 3.5,  # Ajoute de l'espace autour du texte
+                  max.overlaps = 10) +
+  scale_y_log10() +
   labs(title = "",
        x = "Rang",
        y = "Probabilité de participation estimée",
-       color = "Echantillon :") +
+       color = "GHR :",
+       shape = "Échantillon :") +
   theme_minimal() +
-  scale_color_manual(values = c("Probabiliste" = "blue", 
-                                "Non probabiliste" = "red")) +
-  theme(legend.position = "top") + 
-  geom_segment(data = group_limits_inc, aes(x = 0, xend = 5, y = max_prob, yend = max_prob),
-               color = "black", linewidth = 1.5, linetype = "dashed") +
-  geom_text(data = group_limits_inc, aes(x = 20, y = max_prob, label = label), color = "black", size = 3, vjust = 0.3)
+  scale_color_manual(values = c("1" = "#2674DD",
+                                "2" = "#42BB65",
+                                "3" = "#FFC300",  
+                                "4" = "#E91422")) +
+  scale_shape_manual(values = c("Probabiliste" = 16,  # Rond
+                                "Non probabiliste" = 17)) +  # Losange
+  theme(legend.position = "top")
 
 plot
 ggsave(paste0("png/distrib_proba_selon_rang_inc.png"), 
@@ -254,6 +262,8 @@ ggsave(paste0("png/distrib_proba_selon_rang_inc.png"),
 tot_prob <- round(sum(ech_prob$produit),1)
 tot_naif <- round(sum(ech_non_prob$y)*N/n_non_prob,1)
 
+tot_logit_c <- round(sum(ech_non_prob$produit_logit_c),1)
+tot_logit_inc <- round(sum(ech_non_prob$produit_logit_inc),1)
 tot_frank_c <- round(sum(ech_non_prob$produit_frank_c),1)
 tot_frank_inc <- round(sum(ech_non_prob$produit_frank_inc),1)
 tot_cart_c <- round(sum(ech_non_prob$produit_cart_c),1)
@@ -263,6 +273,8 @@ vrai_tot
 tot_prob
 tot_naif
 
+tot_logit_c
+tot_logit_inc
 tot_frank_c
 tot_frank_inc
 tot_cart_c 
@@ -271,6 +283,8 @@ tot_cart_inc
 biais_r_tot_prob <- round(100*(tot_prob - vrai_tot)/vrai_tot,3)
 biais_r_tot_naif <- round(100*(tot_naif - vrai_tot)/vrai_tot,3)
 
+biais_r_tot_logit_c <- round(100*(tot_logit_c - vrai_tot)/vrai_tot,3)
+biais_r_tot_logit_inc <- round(100*(tot_logit_inc - vrai_tot)/vrai_tot,3)
 biais_r_tot_frank_c <- round(100*(tot_frank_c - vrai_tot)/vrai_tot,3)
 biais_r_tot_frank_inc <- round(100*(tot_frank_inc - vrai_tot)/vrai_tot,3)
 biais_r_tot_cart_c <- round(100*(tot_cart_c - vrai_tot)/vrai_tot,3)
@@ -279,6 +293,8 @@ biais_r_tot_cart_inc <- round(100*(tot_cart_inc - vrai_tot)/vrai_tot,3)
 biais_r_tot_prob
 biais_r_tot_naif
 
+biais_r_tot_logit_c
+biais_r_tot_logit_inc
 biais_r_tot_frank_c
 biais_r_tot_frank_inc
 biais_r_tot_cart_c
@@ -287,6 +303,10 @@ biais_r_tot_cart_inc
 moy_prob <- round(sum(ech_prob$produit) / sum(1/ech_prob$Prob),3)
 moy_naif <- mean(ech_non_prob$y)
 
+moy_logit_c <- 
+  round(sum(ech_non_prob$produit_logit_c) / sum(ech_non_prob$prob_participation_complet),3)
+moy_logit_inc <- 
+  round(sum(ech_non_prob$produit_logit_inc) / sum(ech_non_prob$prob_participation_incomplet),3)
 moy_frank_c <- round(sum(ech_non_prob$produit_frank_c) / sum(ech_non_prob$poids_frank_c),3)
 moy_frank_inc <- round(sum(ech_non_prob$produit_frank_inc) / sum(ech_non_prob$poids_frank_inc),3)
 moy_cart_c <- round(sum(ech_non_prob$produit_cart_c) / sum(1/ech_non_prob$propensity_c),3)
@@ -296,6 +316,8 @@ vrai_moy
 moy_prob
 moy_naif
 
+moy_logit_c
+moy_logit_inc
 moy_frank_c
 moy_frank_inc
 moy_cart_c
@@ -304,6 +326,8 @@ moy_cart_inc
 biais_r_moy_prob <- round(100*(moy_prob - vrai_moy)/vrai_moy,3)
 biais_r_moy_naif <- round(100*(moy_naif - vrai_moy)/vrai_moy,3)
 
+biais_r_moy_logit_c <- round(100*(moy_logit_c - vrai_moy)/vrai_moy,3)
+biais_r_moy_logit_inc <- round(100*(moy_logit_inc - vrai_moy)/vrai_moy,3)
 biais_r_moy_frank_c <- round(100*(moy_frank_c - vrai_moy)/vrai_moy,3)
 biais_r_moy_frank_inc <- round(100*(moy_frank_inc - vrai_moy)/vrai_moy,3)
 biais_r_moy_cart_c <- round(100*(moy_cart_c - vrai_moy)/vrai_moy,3)
@@ -312,6 +336,8 @@ biais_r_moy_cart_inc <- round(100*(moy_cart_inc - vrai_moy)/vrai_moy,3)
 biais_r_moy_prob
 biais_r_moy_naif
 
+biais_r_moy_logit_c
+biais_r_moy_logit_inc
 biais_r_moy_frank_c
 biais_r_moy_frank_inc
 biais_r_moy_cart_c
