@@ -197,7 +197,7 @@ selected_values <- data[indices, ] %>%
 # Graphique avec annotations des valeurs sélectionnées
 plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet,  
                          color = as.factor(GHR_c), shape = source)) + 
-  geom_point(alpha = 0.6, size = 2.5) + 
+  geom_point(alpha = 0.6, size = 2.5) +
   geom_text_repel(data = selected_values, aes(label = label), 
                   size = 4, show.legend = FALSE, color = "black",
                   nudge_y = 0.05,  # Décalage vertical pour éviter les chevauchements
@@ -214,8 +214,8 @@ plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet,
                                 "2" = "#42BB65", 
                                 "3" = "#FFC300",  
                                 "4" = "#E91422")) + 
-  scale_shape_manual(values = c("Probabiliste" = 16, 
-                                "Non probabiliste" = 17)) + 
+  scale_shape_manual(values = c("Probabiliste" = 1, 
+                                "Non probabiliste" = 4)) + 
   theme(legend.position = "top")
 
 plot
@@ -249,8 +249,8 @@ plot <- ggplot(data, aes(x = rang_inc, y = prob_participation_incomplet,
                                 "2" = "#42BB65",
                                 "3" = "#FFC300",  
                                 "4" = "#E91422")) +
-  scale_shape_manual(values = c("Probabiliste" = 16,  # Rond
-                                "Non probabiliste" = 17)) +  # Losange
+  scale_shape_manual(values = c("Probabiliste" = 1, 
+                                "Non probabiliste" = 4)) + 
   theme(legend.position = "top")
 
 plot
