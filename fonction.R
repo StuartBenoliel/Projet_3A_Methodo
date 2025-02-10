@@ -1,17 +1,17 @@
 # Fonction pour calculer la somme des πA pour un θ0 donné
-sum_pik <- function(theta0) {
-  eta <- theta0 + theta1*x1 + theta2*x2 + theta3*x3
+sum_pik <- function(alpha_1) {
+  eta <- alpha_1 + 0.1*x1 + 0.2*x2 + alpha_2*x3
   piA <- 1 / (1 + exp(-eta))
   sum(piA)
 }
 
 tirage_non_proba <- function() {
-  # Résolution pour trouver θ0
-  theta0 <- uniroot(function(theta) sum_pik(theta) - n_non_prob, 
+  # Résolution pour trouver alpha_1
+  alpha_1 <- uniroot(function(alpha) sum_pik(alpha) - n_non_prob, 
                     interval = c(-50, 50))$root
   
   # Tirage de Poisson avec pik selon un modèle logistique
-  pop$Prob <- 1 / (1 + exp(-(theta0 + theta1*x1 + theta2*x2 + theta3*x3)))
+  pop$Prob <- 1 / (1 + exp(-(alpha_1 + 0.1*x1 + 0.2*x2 + alpha_2*x3)))
   ech_non_prob <- sampling::UPpoisson(pop$Prob)
   ech_non_prob <- getdata(pop, ech_non_prob) %>% 
     mutate(indic_participation = 1)
@@ -65,7 +65,7 @@ U_incomplet <- function(alpha, data, tot_np){
   tot_np[-3] - terme_2
 }
 
-fonction_simulation <- function(n_prob, n_non_prob, theta1, theta2, theta3,
+fonction_simulation <- function(n_prob, n_non_prob, alpha_2,
                                 a, nb_GHR){
   
   # Pour l'échantillon non probabiliste

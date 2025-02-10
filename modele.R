@@ -37,28 +37,30 @@ tot_np <- ech_non_prob %>%
   as.numeric()
 tot_np
 
-alpha_complet <- newtonsys(U_complet, c(0, 0, 0), data = ech_prob, tot_np = tot_np)
-alpha_incomplet <- newtonsys(U_incomplet, c(0, 0), data = ech_prob, tot_np = tot_np)
+alpha_complet <- newtonsys(U_complet, c(0, 0, 0), 
+                           data = ech_prob, tot_np = tot_np)
+alpha_incomplet <- newtonsys(U_incomplet, c(0, 0), 
+                             data = ech_prob, tot_np = tot_np)
 
 ech_prob <- ech_prob %>% 
-  mutate(prob_participation_complet =
+  mutate(prob_particip_c =
            1 / (1 + exp(-as.matrix(ech_prob[, c("x1", "x2", "x3")]) %*% 
                           alpha_complet$zero)),
-         prob_participation_incomplet =
+         prob_particip_inc =
            1 / (1 + exp(-as.matrix(ech_prob[, c("x1", "x2")]) %*% 
                           alpha_incomplet$zero)),
-         rang_c = rank(prob_participation_complet),
-         rang_inc = rank(prob_participation_incomplet))
+         rang_c = rank(prob_particip_c),
+         rang_inc = rank(prob_particip_inc))
 
 ech_non_prob <- ech_non_prob %>% 
-  mutate(prob_participation_complet =
+  mutate(prob_particip_c =
            1 / (1 + exp(-as.matrix(ech_non_prob[, c("x1", "x2", "x3")]) %*% 
                           alpha_complet$zero)),
-         prob_participation_incomplet =
+         prob_particip_inc =
            1 / (1 + exp(-as.matrix(ech_non_prob[, c("x1", "x2")]) %*% 
                           alpha_incomplet$zero)),
-         rang_c = rank(prob_participation_complet),
-         rang_inc = rank(prob_participation_incomplet))
+         rang_c = rank(prob_particip_c),
+         rang_inc = rank(prob_particip_inc))
 
 # Méthode nppCART
 
@@ -83,8 +85,7 @@ log_a <- log(1 + a)
 ech_non_prob <- ech_non_prob %>% 
   mutate(
     frank_c = log(1 + a * rang_c / nrow(ech_non_prob)),
-    frank_inc = log(1 + a * rang_inc / nrow(ech_non_prob))
-  ) %>% 
+    frank_inc = log(1 + a * rang_inc / nrow(ech_non_prob))) %>% 
   mutate(
     GHR_c = cut(frank_c, 
                 breaks = seq(0, log_a, length.out = nb_GHR + 1), 
@@ -104,8 +105,8 @@ table(ech_non_prob$GHR_inc)
 group_limits_c <- ech_non_prob %>%
   group_by(GHR_c) %>%
   summarise(
-    min_prob = min(prob_participation_complet),
-    max_prob = max(prob_participation_complet)
+    min_prob = min(prob_particip_c),
+    max_prob = max(prob_particip_c)
   ) %>%
   mutate(
     pt = lead(min_prob),
@@ -115,8 +116,8 @@ group_limits_c <- ech_non_prob %>%
 group_limits_inc <- ech_non_prob %>%
   group_by(GHR_inc) %>%
   summarise(
-    min_prob = min(prob_participation_incomplet),
-    max_prob = max(prob_participation_incomplet)
+    min_prob = min(prob_particip_inc),
+    max_prob = max(prob_particip_inc)
   ) %>%
   mutate(
     pt = lead(min_prob),
@@ -126,16 +127,16 @@ group_limits_inc <- ech_non_prob %>%
 ech_prob <- ech_prob %>%
   mutate(
     GHR_c = case_when(
-      prob_participation_complet < group_limits_c$midpoint_next[1] ~ 1,
-      prob_participation_complet < group_limits_c$midpoint_next[2] ~ 2,
-      prob_participation_complet < group_limits_c$midpoint_next[3] ~ 3,
-      prob_participation_complet >= group_limits_c$midpoint_next[3] ~ 4
+      prob_particip_c < group_limits_c$midpoint_next[1] ~ 1,
+      prob_particip_c < group_limits_c$midpoint_next[2] ~ 2,
+      prob_particip_c < group_limits_c$midpoint_next[3] ~ 3,
+      prob_particip_c >= group_limits_c$midpoint_next[3] ~ 4
     ),
     GHR_inc = case_when(
-      prob_participation_incomplet < group_limits_inc$midpoint_next[1] ~ 1,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[2] ~ 2,
-      prob_participation_incomplet < group_limits_inc$midpoint_next[3] ~ 3,
-      prob_participation_incomplet >= group_limits_inc$midpoint_next[3] ~ 4
+      prob_particip_inc < group_limits_inc$midpoint_next[1] ~ 1,
+      prob_particip_inc < group_limits_inc$midpoint_next[2] ~ 2,
+      prob_particip_inc < group_limits_inc$midpoint_next[3] ~ 3,
+      prob_particip_inc >= group_limits_inc$midpoint_next[3] ~ 4
     ),
     produit = y / Prob
   )
@@ -154,7 +155,6 @@ ech_non_prob <- ech_non_prob %>%
       GHR_c == 3 ~ Ng_c$Ng[3] / nrow(ech_non_prob[ech_non_prob$GHR_c == 3, ]),
       GHR_c == 4 ~ Ng_c$Ng[4] / nrow(ech_non_prob[ech_non_prob$GHR_c == 4, ])
     ),
-    
     poids_frank_inc = case_when(
       GHR_inc == 1 ~ Ng_inc$Ng[1] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 1, ]),
       GHR_inc == 2 ~ Ng_inc$Ng[2] / nrow(ech_non_prob[ech_non_prob$GHR_inc == 2, ]),
@@ -163,27 +163,36 @@ ech_non_prob <- ech_non_prob %>%
     )
   ) %>% 
   mutate(
-    produit_logit_c = y / prob_participation_complet,
-    produit_logit_inc = y / prob_participation_incomplet,
+    produit_logit_c = y / prob_particip_c,
+    produit_logit_inc = y / prob_particip_inc,
     produit_frank_c = poids_frank_c * y,
     produit_frank_inc = poids_frank_inc * y,
     produit_cart_c = y / propensity_c,
     produit_cart_inc = y / propensity_inc
   )
 
+table_poids <- ech_non_prob %>% 
+  mutate(poids_particip_c = 1/prob_particip_c,
+         poids_particip_inc = 1/prob_particip_inc,
+         poids_cart_c = 1/propensity_c,
+         poids_cart_inc = 1/propensity_inc) %>% 
+  select(poids_particip_c, poids_particip_inc,
+         poids_frank_c, poids_frank_inc, poids_cart_c, poids_cart_inc)
+
+
 ech_prob$source <- "Probabiliste"
 ech_non_prob$source <- "Non probabiliste"
 
 # Fusionner les deux jeux de données
 data <- rbind(ech_prob %>% 
-                select(rang_c, rang_inc, prob_participation_complet,
-                       prob_participation_incomplet, GHR_c, GHR_inc, source),
+                select(rang_c, rang_inc, prob_particip_c,
+                       prob_particip_inc, GHR_c, GHR_inc, source),
               ech_non_prob %>% 
-                select(rang_c, rang_inc, prob_participation_complet,
-                       prob_participation_incomplet, GHR_c, GHR_inc, source))
+                select(rang_c, rang_inc, prob_particip_c,
+                       prob_particip_inc, GHR_c, GHR_inc, source))
 
 data <- data %>%
-  arrange(prob_participation_complet)
+  arrange(prob_particip_c)
 
 # Récupérer les indices pour les valeurs à annoter
 indices <- c(1, round(nrow(data)/4), round(2*nrow(data)/4), 
@@ -191,11 +200,10 @@ indices <- c(1, round(nrow(data)/4), round(2*nrow(data)/4),
 
 # Ajouter les labels arrondis à 2 chiffres significatifs
 selected_values <- data[indices, ] %>%
-  mutate(label = format(prob_participation_complet, digits = 2, scientific = TRUE))
-
+  mutate(label = format(prob_particip_c, digits = 2, scientific = TRUE))
 
 # Graphique avec annotations des valeurs sélectionnées
-plot <- ggplot(data, aes(x = rang_c, y = prob_participation_complet,  
+plot <- ggplot(data, aes(x = rang_c, y = prob_particip_c,  
                          color = as.factor(GHR_c), shape = source)) + 
   geom_point(alpha = 0.6, size = 2.5) +
   geom_text_repel(data = selected_values, aes(label = label), 
@@ -224,13 +232,13 @@ ggsave(paste0("png/distrib_proba_selon_rang_c.png"),
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 data <- data %>%
-  arrange(prob_participation_incomplet)
+  arrange(prob_particip_inc)
 
 # Ajouter les labels arrondis à 2 chiffres significatifs
 selected_values <- data[indices, ] %>%
-  mutate(label = format(prob_participation_incomplet, digits = 2, scientific = TRUE))
+  mutate(label = format(prob_particip_inc, digits = 2, scientific = TRUE))
 
-plot <- ggplot(data, aes(x = rang_inc, y = prob_participation_incomplet, 
+plot <- ggplot(data, aes(x = rang_inc, y = prob_particip_inc, 
                          color = as.factor(GHR_inc), shape = source)) +
   geom_point(alpha = 0.6, size= 2.5) +
   geom_text_repel(data = selected_values, aes(label = label), 
@@ -257,10 +265,18 @@ plot
 ggsave(paste0("png/distrib_proba_selon_rang_inc.png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
+table_deciles <- table_poids %>%
+  reframe(across(everything(), list(decile = ~quantile(., probs = seq(0, 1, 0.1))))) %>%
+  mutate(index = row_number() - 1) %>%  # Création d'index en premier
+  mutate(across(where(is.numeric), ~round(., 1))) %>%  # Arrondi des colonnes numériques
+  relocate(index)  # Remet index en première colonne
+table_deciles 
+
+
 # Calcul des estimateurs
 
-tot_prob <- round(sum(ech_prob$produit),1)
-tot_naif <- round(sum(ech_non_prob$y)*N/n_non_prob,1)
+tot_prob <- round(sum(ech_prob$produit), 1)
+tot_naif <- round(sum(ech_non_prob$y)* N/n_non_prob, 1)
 
 tot_logit_c <- round(sum(ech_non_prob$produit_logit_c),1)
 tot_logit_inc <- round(sum(ech_non_prob$produit_logit_inc),1)
@@ -304,9 +320,9 @@ moy_prob <- round(sum(ech_prob$produit) / sum(1/ech_prob$Prob),3)
 moy_naif <- mean(ech_non_prob$y)
 
 moy_logit_c <- 
-  round(sum(ech_non_prob$produit_logit_c) / sum(ech_non_prob$prob_participation_complet),3)
+  round(sum(ech_non_prob$produit_logit_c) / sum(ech_non_prob$prob_particip_c),3)
 moy_logit_inc <- 
-  round(sum(ech_non_prob$produit_logit_inc) / sum(ech_non_prob$prob_participation_incomplet),3)
+  round(sum(ech_non_prob$produit_logit_inc) / sum(ech_non_prob$prob_particip_inc),3)
 moy_frank_c <- round(sum(ech_non_prob$produit_frank_c) / sum(ech_non_prob$poids_frank_c),3)
 moy_frank_inc <- round(sum(ech_non_prob$produit_frank_inc) / sum(ech_non_prob$poids_frank_inc),3)
 moy_cart_c <- round(sum(ech_non_prob$produit_cart_c) / sum(1/ech_non_prob$propensity_c),3)

@@ -15,9 +15,9 @@ source(file = "fonction.R")
 if (rho_target == 0.3){
   dossier_cor <- "cor_faible"
 } else if (rho_target == 0.5){
-  if (theta3 == 0.1){
+  if (alpha_2 == 0.1){
     dossier_cor <- "cor_moyen_theta_faible"
-  } else if (theta3 == 0.3){
+  } else if (alpha_2 == 0.3){
     dossier_cor <- "cor_moyen_theta_fort"
   } 
 } else if (rho_target == 0.8){
@@ -48,9 +48,8 @@ df <- data.frame(
 n_simu <- 100
 
 for (i in 1:n_simu){
-  vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob,
-                             theta1 = theta1, theta2 = theta2, 
-                             theta3 = theta3, a = a, nb_GHR = nb_GHR)
+  vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob, 
+                             alpha_2 = alpha_2, a = a, nb_GHR = nb_GHR)
   
   df <- rbind(df, data.frame(
     biais_r_tot_prob = vec[1], biais_r_tot_naif = vec[2],
