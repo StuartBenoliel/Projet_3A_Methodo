@@ -11,8 +11,16 @@ library(ggrepel)
 rm(list=ls())
 set.seed(1)
 
-source(file = "parametre.R")
 source(file = "fonction.R")
+source(file = "parametre.R")
+
+pop <- genere_pop(rho = rho, N=N)
+
+vrai_tot <- sum(pop$y)
+vrai_tot
+
+vrai_moy <- mean(pop$y)
+vrai_moy
 
 # Pour l'échantillon non probabiliste
 
@@ -288,7 +296,6 @@ tot_cart_inc <- round(sum(ech_non_prob$produit_cart_inc),1)
 vrai_tot
 tot_prob
 tot_naif
-
 tot_logit_c
 tot_logit_inc
 tot_frank_c

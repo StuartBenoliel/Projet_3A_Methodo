@@ -11,18 +11,33 @@ set.seed(1)
 
 source(file = "parametre.R")
 source(file = "fonction.R")
+# 0.1 ou 0.3
+alpha_2 <- 0.3
 
-if (rho_target == 0.3){
-  dossier_cor <- "cor_faible"
-} else if (rho_target == 0.5){
-  if (alpha_2 == 0.1){
-    dossier_cor <- "cor_moyen_theta_faible"
-  } else if (alpha_2 == 0.3){
-    dossier_cor <- "cor_moyen_theta_fort"
-  } 
-} else if (rho_target == 0.8){
-  dossier_cor <- "cor_elevee"
+# 0.3 / 0.5 / 0.8
+rho <- 0.5
+
+pop <- genere_pop(rho = rho, N=N)
+
+vrai_tot <- sum(pop$y)
+vrai_tot
+
+vrai_moy <- mean(pop$y)
+vrai_moy
+
+if (rho == 0.3){
+  dossier <- "cor_faible"
+} else if (rho == 0.5){
+  dossier <- "cor_moyen"
+} else if (rho == 0.8){
+  dossier <- "cor_elevee"
 }
+
+if (alpha_2 == 0.1){
+  dossier <- paste0(dossier,"_alpha2_faible")
+} else if (alpha_2 == 0.3){
+  dossier <- paste0(dossier,"_alpha2_faible")
+} 
 
 # dataframe contenant les résultats des simulations
 df <- data.frame(
@@ -45,7 +60,7 @@ df <- data.frame(
 )
 
 # nombre de simulations
-n_simu <- 100
+n_simu <- 10
 
 for (i in 1:n_simu){
   vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob, 
@@ -77,10 +92,14 @@ resultat <- df %>%
   pivot_longer(cols = everything(), 
                names_to = c("variable", ".value"), 
                names_pattern = "^(.*)_(mean|sd)$") %>% 
-  mutate(RRMSE = if_else(row_number() %in% 17:32, sqrt(mean), NA_real_))
+  mutate(RRMSE = if_else(row_number() %in% 17:32, sqrt(mean), NA))
 
-resultat[1:16,]
-resultat[17:32,]
+resultat <- resultat[1:16,] %>%
+  mutate(estimateur = sub("^biais_r_", "", variable)) %>%
+  select(estimateur, biais_relatif = mean) %>% 
+  mutate(RRMSE = resultat[17:32,]$RRMSE)
+
+saveRDS(resultat, paste0("table_resultat/",dossier,".rds"))
 
 
 df_long <- df %>% 
@@ -96,10 +115,10 @@ df_long <- df %>%
                names_to = "variable", values_to = "value") %>% 
   mutate(variable = factor(variable, 
                            levels = c("biais_r_tot_prob", 
-                                      "biais_r_tot_frank_c", 
                                       "biais_r_tot_cart_c",
+                                      "biais_r_tot_frank_c", 
+                                      "biais_r_tot_cart_inc",
                                       "biais_r_tot_frank_inc", 
-                                      "biais_r_tot_cart_inc", 
                                       "biais_r_tot_naif")))
 
 plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
@@ -123,7 +142,7 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   labs(x = "", y = "Biais relatif des estimateurs du total de y") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
-ggsave(paste0("png/","/biais_tot_",dossier_cor,".png"), 
+ggsave(paste0("png/","/biais_tot_",dossier,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
 
 
@@ -140,10 +159,10 @@ df_long <- df %>%
                names_to = "variable", values_to = "value") %>% 
   mutate(variable = factor(variable, 
                            levels = c("biais_r_moy_prob", 
-                                      "biais_r_moy_frank_c", 
                                       "biais_r_moy_cart_c", 
+                                      "biais_r_moy_frank_c", 
+                                      "biais_r_moy_cart_inc",
                                       "biais_r_moy_frank_inc",
-                                      "biais_r_moy_cart_inc", 
                                       "biais_r_moy_naif")))
 
 plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
@@ -167,5 +186,5 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
   labs(x = "", y = "Biais relatif des estimateurs de la moyenne de y") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 plot
-ggsave(paste0("png/","/biais_moy_",dossier_cor,".png"), 
+ggsave(paste0("png/","/biais_moy_",dossier,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")

@@ -1,6 +1,39 @@
-# Fonction pour calculer la somme des πA pour un θ0 donné
+genere_pop <- function(rho = 0.5, N = 20000) {
+
+  # Générer les variables nécessaires au calcul des x selon les distributions spécifiées
+  z1 <- rbinom(N, size = 1, prob = 0.3)                # z1i ∼ Bernoulli(0.3)
+  z2 <- runif(N, min = 0, max = 2)                     # z2i ∼ Uniforme(0, 2)
+  z3 <- rexp(N, rate = 1)                              # z3i ∼ Exponentielle(1)
+  epsilon <- rnorm(N, mean = 0, sd = 1)                # εi ∼ Normale(0, 1)
+  
+  # Calculer les variables x selon les relations données
+  x1 <- z1                                             
+  x2 <- z2 + 0.3 * x1
+  x3 <- z3 + 0.2 * (x1 + x2)
+  
+  x_beta <- 2 + x1 + x2 + x3
+  
+  # Définir la corrélation entre les variables auxiliaires et la variable d'intérêt
+  sigma <- sqrt(var(x_beta) * (1 / rho^2 - 1))
+  
+  # Calculer la variable réponse y selon le modèle
+  y <- x_beta + sigma * epsilon         # yi = 2 + x1i + x2i + x3i + σ*εi
+  # Proche de la corrélation cible
+  cor(y, x_beta)
+  
+  pop <- data.frame(
+    y = y,
+    x1 = x1,
+    x2 = x2,
+    x3 = x3
+  )
+  return(pop)
+}
+
+
+# Fonction pour calculer la somme des πA pour un alpha_1 donné
 sum_pik <- function(alpha_1) {
-  eta <- alpha_1 + 0.1*x1 + 0.2*x2 + alpha_2*x3
+  eta <- alpha_1 + 0.1*pop$x1 + 0.2*pop$x2 + alpha_2*pop$x3
   piA <- 1 / (1 + exp(-eta))
   sum(piA)
 }
@@ -11,7 +44,7 @@ tirage_non_proba <- function() {
                     interval = c(-50, 50))$root
   
   # Tirage de Poisson avec pik selon un modèle logistique
-  pop$Prob <- 1 / (1 + exp(-(alpha_1 + 0.1*x1 + 0.2*x2 + alpha_2*x3)))
+  pop$Prob <- 1 / (1 + exp(-(alpha_1 + 0.1*pop$x1 + 0.2*pop$x2 + alpha_2*pop$x3)))
   ech_non_prob <- sampling::UPpoisson(pop$Prob)
   ech_non_prob <- getdata(pop, ech_non_prob) %>% 
     mutate(indic_participation = 1)
