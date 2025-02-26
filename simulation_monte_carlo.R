@@ -12,10 +12,15 @@ set.seed(1)
 source(file = "parametre.R")
 source(file = "fonction.R")
 # 0.1 ou 0.3
-alpha_2 <- 0.3
+alpha2_values <- c(0.1, 0.3)
 
 # 0.3 / 0.5 / 0.8
-rho <- 0.5
+rho_values <- c(0.3, 0.5, 0.8)
+
+for (i in 1:6){
+  alpha_2 <- alpha2_values[1+(i%%2)]
+  
+  rho <- rho_values[1+(i%%3)]
 
 pop <- genere_pop(rho = rho, N=N)
 
@@ -36,7 +41,7 @@ if (rho == 0.3){
 if (alpha_2 == 0.1){
   dossier <- paste0(dossier,"_alpha2_faible")
 } else if (alpha_2 == 0.3){
-  dossier <- paste0(dossier,"_alpha2_faible")
+  dossier <- paste0(dossier,"_alpha2_fort")
 } 
 
 # dataframe contenant les résultats des simulations
@@ -60,7 +65,7 @@ df <- data.frame(
 )
 
 # nombre de simulations
-n_simu <- 10
+n_simu <- 10000
 
 for (i in 1:n_simu){
   vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob, 
@@ -188,3 +193,5 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
 plot
 ggsave(paste0("png/","/biais_moy_",dossier,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
+
+}
