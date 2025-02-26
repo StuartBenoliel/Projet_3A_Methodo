@@ -17,10 +17,9 @@ alpha2_values <- c(0.1, 0.3)
 # 0.3 / 0.5 / 0.8
 rho_values <- c(0.3, 0.5, 0.8)
 
-for (i in 1:6){
-  alpha_2 <- alpha2_values[1+(i%%2)]
-  
-  rho <- rho_values[1+(i%%3)]
+alpha_2 <- 0.1
+
+rho <- 0.8
 
 pop <- genere_pop(rho = rho, N=N)
 
@@ -65,7 +64,7 @@ df <- data.frame(
 )
 
 # nombre de simulations
-n_simu <- 10000
+n_simu <- 1000
 
 for (i in 1:n_simu){
   vec <- fonction_simulation(n_prob = n_prob, n_non_prob = n_non_prob, 
@@ -193,5 +192,3 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
 plot
 ggsave(paste0("png/","/biais_moy_",dossier,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
-
-}
