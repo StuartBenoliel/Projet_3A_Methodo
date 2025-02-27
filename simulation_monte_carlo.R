@@ -17,7 +17,10 @@ alpha2_values <- c(0.1, 0.3)
 # 0.3 / 0.5 / 0.8
 rho_values <- c(0.3, 0.5, 0.8)
 
-alpha_2 <- 0.1
+for(i in 1:6){
+  
+
+alpha_2 <- 0.3
 
 rho <- 0.8
 
@@ -192,3 +195,5 @@ plot <- ggplot(df_long, aes(x = variable, y = value, fill = variable)) +
 plot
 ggsave(paste0("png/","/biais_moy_",dossier,".png"), 
        plot = plot, width = 8, height = 6, dpi = 300, bg= "white")
+
+}

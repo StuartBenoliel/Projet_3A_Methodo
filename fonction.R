@@ -270,7 +270,7 @@ fonction_simulation <- function(n_prob, n_non_prob, alpha_2,
   erreur_carre_tot_cart_inc <- ((tot_cart_inc - vrai_tot)/vrai_tot)^2
   
   moy_prob <- sum(ech_prob$produit) / sum(1/ech_prob$Prob)
-  moy_naif <- mean(ech_non_prob$y)
+  moy_naif <- sum(ech_non_prob$y)/nrow(ech_non_prob)
   moy_logit_c <- sum(ech_non_prob$produit_logit_c) / sum(ech_non_prob$prob_participation_complet)
   moy_logit_inc <- sum(ech_non_prob$produit_logit_inc) / sum(ech_non_prob$prob_participation_incomplet)
   moy_frank_c <- sum(ech_non_prob$produit_frank_c) / sum(ech_non_prob$poids_frank_c)
